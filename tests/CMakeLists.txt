@@ -7,7 +7,6 @@ set(HDRS_DIR "../utilities")
 
 add_executable(${PROJECT_NAME}
     ${HDRS_DIR}/clear.hpp
-    ${HDRS_DIR}/ring_array.hpp
 
     main.cpp
     clear_tests.cpp
