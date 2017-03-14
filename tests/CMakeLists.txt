@@ -7,9 +7,11 @@ set(HDRS_DIR "../utilities")
 
 add_executable(${PROJECT_NAME}
     ${HDRS_DIR}/clear.hpp
+    ${HDRS_DIR}/ring_array.hpp
 
     main.cpp
     clear_tests.cpp
+    ring_array_tests.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} gtest gmock pthread)

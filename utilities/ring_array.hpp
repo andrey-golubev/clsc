@@ -2,106 +2,91 @@
 #define _RING_ARRAY_HPP_
 
 #include <array>
+#include <vector>
 #include <stdexcept>
 
-template<typename T, std::size_t N>
-class ring_buffer
+namespace clsc
 {
-    ring_buffer() = delete;
-public:
-    ring_buffer(const size_t size) :
-        m_capacity(size),
-        m_size(0),
-        m_head(0),
-        m_tail(0)
+    //TODO: m_head - m_tail > 0 - always, except init
+    template<typename T, std::size_t N>
+    class ring_array
     {
-        if (size <= 1)
+    public:
+        ring_array() : m_head(0), m_tail(0), m_capacity(N)
         {
-            throw std::invalid_argument("illegal size");
         }
-        m_array = new T[size];
-    }
 
-    ~ring_buffer()
-    {
-        delete[] m_array;
-    }
-
-//    const size_t size() const
-//    {
-//        return static_cast<size_t>(std::abs(static_cast<int>(m_head - m_tail)));
-//    }
-
-    const size_t capacity() const
-    {
-        return m_capacity;
-    }
-
-//    const bool empty() const
-//    {
-//        return (m_head == m_tail) ? false : true;
-//    }
-
-//    const T* data() const
-//    {
-//        return m_array;
-//    }
-
-    void push_back(const T& val)
-    {
-        m_tail = (m_tail + 1) % m_capacity;
-        m_array[m_tail] = val;
-        if (m_tail == m_head)
+        ring_array(const std::initializer_list<T>& list) : m_head(0), m_tail(0), m_capacity(N), m_array(list)
         {
-            m_head = (m_head + 1) % m_capacity;
         }
-    }
 
-    const T front() const
-    {
-        auto val = m_array[m_head];
-        m_tail = m_head;
-        m_head = (m_head + 1) % m_capacity;
-        return val;
-    }
-
-    const T back() const
-    {
-        auto val = m_array[m_tail];
-        m_tail = (m_tail + 1) % m_capacity;
-        if (m_tail == m_head)
+        size_t size() const
         {
-            m_head = (m_head + 1) % m_capacity;
+            return static_cast<size_t>(std::abs(m_head - m_tail));
         }
-        return val;
-    }
 
-//    const T at(const int index) const
-//    {
-//        if (index >= m_size)
-//        {
-//            throw std::out_of_range("index out of range");
-//        }
-//        return m_array[index];
-//    }
+        size_t capacity() const
+        {
+            return m_capacity;
+        }
 
-//    T& operator[](int index) const
-//    {
-//        if (index >= m_capacity)
-//        {
-//            throw std::out_of_range("index out of range");
-//        }
-//        return m_array[index];
-//    }
+    //    const bool empty() const
+    //    {
+    //        return (m_head == m_tail) ? false : true;
+    //    }
 
-private:
-    T* m_array;
-    const size_t m_capacity;
-    size_t m_size;
+        const T* data() const
+        {
+            return m_array.data();
+        }
 
-    std::array<T, N> m_array1;
+        void push_back(const T& val)
+        {
+            if (m_tail == m_head && size() != 0)
+            {
+                m_head = (m_head + 1) % m_capacity;
+            }
+            m_array[m_tail] = val;
+            m_tail = (m_tail + 1) % m_capacity;
+        }
 
-    uint32_t m_head, m_tail;
-};
+        const T& front()
+        {
+            // TODO: cannot out_of_range because of std::array?
+//            if (size() == 0 && m_array.size() == 0)
+//                throw std::out_of_range("array is empty");
+
+//            const auto& val = m_array[m_head];
+//            m_head = (m_head + 1) % m_capacity;
+//            m_tail = (m_tail + 1) % m_capacity;
+            return m_array[m_head];
+        }
+
+        const T& back()
+        {
+            // TODO: cannot out_of_range because of std::array?
+//            if (size() == 0 && m_array.size() == 0)
+//                throw std::out_of_range("array is empty");
+
+            const auto& pos = (m_tail + m_capacity -1) % m_capacity; // TODO: check pos calculation
+//            const auto& val = m_array[pos];
+//            m_tail > 0 ? m_tail-- : m_tail = m_capacity - ((m_tail + 1) % m_capacity);
+//            m_head > 0 ? m_head-- : m_capacity - ((m_head + 1) % m_capacity);
+            return m_array[pos];
+        }
+
+        T& operator[](int index)
+        {
+            if ((index >= size() && index >= m_array.size()) || index < 0)
+                throw std::out_of_range("invalid index");
+            return m_array[(m_head + index) % m_capacity];
+        }
+
+    private:
+        int32_t m_head, m_tail;
+        const size_t m_capacity;
+        std::array<T, N> m_array;
+    };
+}
 
 #endif /* _RING_ARRAY_HPP_ */
