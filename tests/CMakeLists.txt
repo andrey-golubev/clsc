@@ -3,13 +3,9 @@ project(clsc_tests)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
 
-set(HDRS_DIR "../utilities")
-
 add_executable(${PROJECT_NAME}
-    ${HDRS_DIR}/clear.hpp
-
     main.cpp
     clear_tests.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} gtest gmock pthread)
+target_link_libraries(${PROJECT_NAME} clsc_utils gtest gmock pthread)
