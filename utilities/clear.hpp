@@ -13,7 +13,7 @@
  * If the object is POD, it is safely cleaned by default cleaner unless user-defined cleaner is provided.
  * If the object is non-POD, cleaner must be provided by the user.
  * Note: If the object is a pointer, prior dereferencing is required in order to modify the underlying data and not the address of the pointer.
- * As the utility accepts user-defined way to work with object, cleaning is not guaranteed to be safe unless the default cleaner is used.
+ * Note: As the utility accepts user-defined way to work with object, cleaning is not guaranteed to be safe unless the default cleaner is used.
  */
 
 namespace clsc

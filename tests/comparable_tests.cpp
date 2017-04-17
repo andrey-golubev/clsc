@@ -34,7 +34,7 @@ TEST(comparable_tests, simple_inheritance)
     compare(a, b);
 }
 
-TEST(comparable_tests, different_base_inheritance)
+TEST(comparable_tests, multiple_inheritance)
 {
     class operator_mock
     {
@@ -60,7 +60,7 @@ TEST(comparable_tests, different_base_inheritance)
     compare(a, b);
 }
 
-TEST(comparable_tests, hierarchical_inheritance)
+TEST(comparable_tests, multilevel_inheritance)
 {
     class operator_mock : public clsc::comparable<operator_mock>
     {
