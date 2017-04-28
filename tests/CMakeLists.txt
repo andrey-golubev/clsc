@@ -1,17 +1,11 @@
 cmake_minimum_required(VERSION 2.8)
 project(clsc_tests)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
-
-set(HDRS_DIR "../utilities")
-
 add_executable(${PROJECT_NAME}
-    ${HDRS_DIR}/clear.hpp
-    ${HDRS_DIR}/ring_array.hpp
-
     main.cpp
     clear_tests.cpp
     ring_array_tests.cpp
+    comparable_tests.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} gtest gmock pthread)
+target_link_libraries(${PROJECT_NAME} clsc_utils gtest gmock pthread)
