@@ -1,15 +1,18 @@
 #ifndef _RING_ARRAY_HPP_
 #define _RING_ARRAY_HPP_
 
+#include <comparable.hpp>
+
 #include <array>
 #include <vector>
 #include <stdexcept>
+#include <algorithm>
 
 namespace clsc
 {
     //TODO: m_head - m_tail > 0 - always, except init
     template<typename T, std::size_t N>
-    class ring_array //TODO: think about enable_if'd comparable inheritance - add comparable version that is empty if operator() is undefined
+    class ring_array : public adjustable_comparable<ring_array<T, N>>
     {
     public:
         ring_array() noexcept(true) : m_head(0), m_tail(0), m_capacity(N), m_array() {}
@@ -97,6 +100,24 @@ namespace clsc
             if ((index >= size() && index >= m_array.size()) || index < 0)
                 throw std::out_of_range("invalid index");
             return m_array[(m_head + index) % m_capacity];
+        }
+
+        //TODO: verify if is_arithmetic is correct to use
+        //TODO: documentation
+        //TODO: tests?
+        std::enable_if_t<std::is_arithmetic<T>::value, int>
+        operator()(const ring_array<T, N>& rhs)
+        {
+            //TODO: define neat implementation or let the user define it or both
+            if (m_array.size() != rhs.m_array.size())
+                return static_cast<int>(m_array.size() - rhs.m_array.size());
+
+            // arrays have the same size
+            const auto mismatched_pair = std::mismatch(m_array.cbegin(), m_array.cend(), rhs.m_array.cbegin(), rhs.m_array.cend());
+            if (mismatched_pair.first == m_array.cend() && mismatched_pair.second == rhs.m_array.cend())
+                return 0; // arrays are considered equal
+
+            return mismatched_pair.first - mismatched_pair.second;
         }
 
     private:
