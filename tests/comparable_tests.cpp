@@ -84,3 +84,34 @@ TEST(comparable_tests, multilevel_inheritance)
     A a(1), b(2);
     compare(a, b);
 }
+
+TEST(adjustable_comparable_tests, operator_exists)
+{
+    class A : public clsc::adjustable_comparable<A>
+    {
+        int m_val;
+    public:
+        A() = delete;
+        A(const int& val) : m_val(val) {}
+
+        int operator()(const A& rhs)
+        {
+            return m_val - rhs.m_val;
+        }
+    };
+
+    A a(1), b(2);
+    compare(a, b);
+}
+
+TEST(adjustable_comparable_tests, no_operator)
+{
+    class A : public clsc::adjustable_comparable<A>
+    {
+        int m_val;
+    public:
+        A() = delete;
+        A(const int& val) : m_val(val) {}
+    };
+    A a(1), b(2);
+}
