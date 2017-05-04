@@ -9,16 +9,12 @@ namespace clsc
 {
     //TODO: m_head - m_tail > 0 - always, except init
     template<typename T, std::size_t N>
-    class ring_array
+    class ring_array //TODO: think about enable_if'd comparable inheritance - add comparable version that is empty if operator() is undefined
     {
     public:
-        ring_array() : m_head(0), m_tail(0), m_capacity(N)
-        {
-        }
+        ring_array() : m_head(0), m_tail(0), m_capacity(N) {}
 
-        ring_array(const std::initializer_list<T>& list) : m_head(0), m_tail(0), m_capacity(N), m_array(list)
-        {
-        }
+        ring_array(const std::initializer_list<T>& list) : m_head(0), m_tail(0), m_capacity(N), m_array(list) {}
 
         size_t size() const
         {
@@ -30,10 +26,10 @@ namespace clsc
             return m_capacity;
         }
 
-    //    const bool empty() const
-    //    {
-    //        return (m_head == m_tail) ? false : true;
-    //    }
+        bool empty() const
+        {
+            return m_array.empty();
+        }
 
         const T* data() const
         {
@@ -52,30 +48,47 @@ namespace clsc
 
         const T& front()
         {
-            // TODO: cannot out_of_range because of std::array?
-//            if (size() == 0 && m_array.size() == 0)
-//                throw std::out_of_range("array is empty");
-
-//            const auto& val = m_array[m_head];
-//            m_head = (m_head + 1) % m_capacity;
-//            m_tail = (m_tail + 1) % m_capacity;
             return m_array[m_head];
+        }
+
+        const T& move_front()
+        {
+            // TODO: cannot out_of_range because of std::array?
+            if (size() == 0 && m_array.size() == 0)
+                throw std::out_of_range("array is empty");
+
+            const auto& val = m_array[m_head];
+            m_head = (m_head + 1) % m_capacity;
+            m_tail = (m_tail + 1) % m_capacity;
+            return val;
         }
 
         const T& back()
         {
+            const auto& pos = (m_tail + m_capacity -1) % m_capacity; // TODO: check pos calculation
+            return m_array[pos];
+        }
+
+        const T& move_back()
+        {
             // TODO: cannot out_of_range because of std::array?
-//            if (size() == 0 && m_array.size() == 0)
-//                throw std::out_of_range("array is empty");
+            if (size() == 0 && m_array.size() == 0)
+                throw std::out_of_range("array is empty");
 
             const auto& pos = (m_tail + m_capacity -1) % m_capacity; // TODO: check pos calculation
-//            const auto& val = m_array[pos];
-//            m_tail > 0 ? m_tail-- : m_tail = m_capacity - ((m_tail + 1) % m_capacity);
-//            m_head > 0 ? m_head-- : m_capacity - ((m_head + 1) % m_capacity);
+            m_tail > 0 ? m_tail-- : m_tail = m_capacity - ((m_tail + 1) % m_capacity);
+            m_head > 0 ? m_head-- : m_capacity - ((m_head + 1) % m_capacity);
             return m_array[pos];
         }
 
         T& operator[](int index)
+        {
+            if ((index >= size() && index >= m_array.size()) || index < 0)
+                throw std::out_of_range("invalid index");
+            return m_array[(m_head + index) % m_capacity];
+        }
+
+        T at(int index)
         {
             if ((index >= size() && index >= m_array.size()) || index < 0)
                 throw std::out_of_range("invalid index");

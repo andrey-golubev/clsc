@@ -34,13 +34,13 @@ TEST(ring_array_test, push_back)
 TEST_F(ring_array_tests, front)
 {
     for (int i = 0; i < ARRAY_SIZE; i++)
-        EXPECT_EQ(i, m_buf.front());
+        EXPECT_EQ(i, m_buf.move_front());
 }
 
 TEST_F(ring_array_tests, back)
 {
     for (int i = 0; i < ARRAY_SIZE; i++)
-        EXPECT_EQ(ARRAY_SIZE-(i+1), m_buf.back());
+        EXPECT_EQ(ARRAY_SIZE-(i+1), m_buf.move_back());
 }
 
 TEST_F(ring_array_tests, random_access)
