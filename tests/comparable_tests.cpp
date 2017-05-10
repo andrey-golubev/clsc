@@ -2,18 +2,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-template<typename T>
-void compare(T&& a, T&& b)
-{
-    EXPECT_FALSE(a == b);
-    EXPECT_TRUE(a != b);
-
-    EXPECT_TRUE(a < b);
-    EXPECT_TRUE(a <= b);
-
-    EXPECT_FALSE(a > b);
-    EXPECT_FALSE(a >= b);
-}
+#include "common.hpp"
 
 TEST(comparable_tests, simple_inheritance)
 {
@@ -31,7 +20,7 @@ TEST(comparable_tests, simple_inheritance)
     };
 
     A a(1), b(2);
-    compare(a, b);
+    tests_common::compare(a, b);
 }
 
 TEST(comparable_tests, multiple_inheritance)
@@ -57,7 +46,7 @@ TEST(comparable_tests, multiple_inheritance)
     };
 
     A a(1), b(2);
-    compare(a, b);
+    tests_common::compare(a, b);
 }
 
 TEST(comparable_tests, multilevel_inheritance)
@@ -82,7 +71,7 @@ TEST(comparable_tests, multilevel_inheritance)
     };
 
     A a(1), b(2);
-    compare(a, b);
+    tests_common::compare(a, b);
 }
 
 TEST(adjustable_comparable_tests, operator_exists)
@@ -101,7 +90,7 @@ TEST(adjustable_comparable_tests, operator_exists)
     };
 
     A a(1), b(2);
-    compare(a, b);
+    tests_common::compare(a, b);
 }
 
 TEST(adjustable_comparable_tests, no_operator)
