@@ -4,7 +4,6 @@
 #include <comparable.hpp>
 
 #include <array>
-#include <vector>
 #include <stdexcept>
 #include <algorithm>
 
@@ -132,5 +131,12 @@ namespace clsc
         std::array<T, N> m_array;
     };
 }
+
+/** Experimental
+template<typename Container>
+using iterator_categoty_of_type = typename std::iterator_traits<typename Container::iterator>::iterator_category;
+template<typename Container>
+using has_input_iterator = std::is_base_of<std::input_iterator_tag, iterator_categoty_of_type<Container>>;
+*/
 
 #endif /* _RING_ARRAY_HPP_ */

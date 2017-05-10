@@ -19,6 +19,20 @@ namespace
     };
 }
 
+TEST(ring_array_test, can_compare)
+{
+    clsc::ring_array<int, 1> a, b;
+    a.push_back(1); b.push_back(2);
+    EXPECT_FALSE(a == b);
+    EXPECT_TRUE(a != b);
+
+    EXPECT_TRUE(a < b);
+    EXPECT_TRUE(a <= b);
+
+    EXPECT_FALSE(a > b);
+    EXPECT_FALSE(a >= b);
+}
+
 TEST(ring_array_test, init)
 {
     clsc::ring_array<int, ARRAY_SIZE> buf;
