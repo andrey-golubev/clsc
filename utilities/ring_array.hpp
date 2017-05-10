@@ -16,7 +16,7 @@ namespace clsc
     public:
         ring_array() noexcept(true) : m_head(0), m_tail(0), m_capacity(N), m_array() {}
 
-        ring_array(const std::initializer_list<T>& list) : m_head(0), m_tail(0), m_capacity(N), m_array(list) {} //TODO: think about removing the ctor. initializer_list is problematic
+        ring_array(const std::initializer_list<T>& list) : m_head(0), m_tail(0), m_capacity(N), m_array(list) {}
 
         size_t size() const
         {
@@ -60,7 +60,7 @@ namespace clsc
             return m_array[m_head];
         }
 
-        const T& move_front()
+        const T& rotate_front()
         {
             validate_emptiness();
             const auto& val = m_array[m_head];
@@ -76,7 +76,7 @@ namespace clsc
             return m_array[pos];
         }
 
-        const T& move_back()
+        const T& rotate_back()
         {
             validate_emptiness();
             const auto pos = (m_tail + m_capacity - 1) % m_capacity; // TODO: check pos calculation
@@ -101,17 +101,15 @@ namespace clsc
             return m_array[(m_head + index) % m_capacity];
         }
 
-        //TODO: verify if is_arithmetic is correct to use
         //TODO: documentation
-        //TODO: tests?
         std::enable_if_t<std::is_arithmetic<T>::value, int>
         operator()(const ring_array<T, N>& rhs)
         {
-            //TODO: define neat implementation or let the user define it or both
-            if (m_array.size() != rhs.m_array.size())
+            //TODO: investigate - let the user define an implementation (e.g. via a callable)
+            if (m_array.size() != rhs.m_array.size()) // check on size first
                 return static_cast<int>(m_array.size() - rhs.m_array.size());
 
-            // arrays have the same size
+            // if arrays have the same size
             const auto mismatched_pair = std::mismatch(m_array.cbegin(), m_array.cend(), rhs.m_array.cbegin(), rhs.m_array.cend());
             if (mismatched_pair.first == m_array.cend() && mismatched_pair.second == rhs.m_array.cend())
                 return 0; // arrays are considered equal

@@ -23,7 +23,7 @@ namespace
 
 TEST(ring_array_test, can_compare)
 {
-    clsc::ring_array<int, 1> a, b;
+    clsc::ring_array<int, ARRAY_SIZE> a, b;
     a.push_back(1); b.push_back(2);
     tests_common::compare(a, b);
 }
@@ -63,7 +63,7 @@ TEST_F(ring_array_tests, front)
 TEST_F(ring_array_tests, move_front)
 {
     for (int i = 0; i < ARRAY_SIZE; i++)
-        EXPECT_EQ(i, m_buf.move_front());
+        EXPECT_EQ(i, m_buf.rotate_front());
 }
 
 TEST_F(ring_array_tests, back)
@@ -75,7 +75,7 @@ TEST_F(ring_array_tests, back)
 TEST_F(ring_array_tests, move_back)
 {
     for (int i = 0; i < ARRAY_SIZE; i++)
-        EXPECT_EQ(ARRAY_SIZE-(i+1), m_buf.move_back());
+        EXPECT_EQ(ARRAY_SIZE-(i+1), m_buf.rotate_back());
 }
 
 TEST_F(ring_array_tests, random_access)
