@@ -78,7 +78,7 @@ namespace clsc
         static no  m_has_operator(...);
 
     public:
-        static const bool value = sizeof(m_has_operator(static_cast<Type*>(0))) == sizeof(yes);
+        static const bool value = sizeof(m_has_operator(static_cast<Type*>(nullptr))) == sizeof(yes);
     };
     template<typename T> const bool __has_operator<T>::value;
 
