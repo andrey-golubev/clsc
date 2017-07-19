@@ -7,6 +7,8 @@ add_executable(${PROJECT_NAME}
     clear_tests.cpp
     comparable_tests.cpp
     helpers_tests.cpp
+
+    rubbish.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} clsc_utils gtest gmock pthread)
