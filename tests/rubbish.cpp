@@ -5,6 +5,23 @@
 
 #include <gtest/gtest.h>
 
+template<typename Callable>
+void cout_printer(int times, Callable function_object)
+{
+    for (int i = 0; i < times; i++)
+    {
+        std::cout << function_object(i) << " ";
+    }
+    std::cout << std::endl;
+}
+
+template<typename Callable, typename ...Args>
+void cout_printer(Callable function_object, Args... params)
+{
+    std::cout << function_object(params...) << std::endl;
+}
+
+
 
 TEST(algorithms, counting_sort)
 {
@@ -168,6 +185,83 @@ TEST(algorithms, queue)
     std::cout << std::endl;
 }
 
-TEST(algorithms, list)
+int64_t fibonacci_rec(int64_t n)
 {
+    if (n == 0) return 0;
+    if (n <= 2) return 1;
+    return fibonacci_rec(n - 1) + fibonacci_rec(n - 2);
+}
+
+TEST(algorithms, fibonacci)
+{
+    constexpr auto fibonacci = [] (int64_t n) -> int64_t
+    {
+        if (n == 0) return 0;
+        int64_t a = 0, b = 1;
+        for (int i = 1; i < n; i++)
+        {
+            b += a;
+            a = b - a;
+        }
+        return b;
+    };
+
+    cout_printer(20, fibonacci);
+    cout_printer(20, fibonacci_rec);
+}
+
+TEST(algorithms, combinations)
+{
+    constexpr auto factorial = [] (uint64_t n)
+    {
+        uint64_t ret = 1;
+        for (int i = 2; i <= n; i++)
+        {
+            ret *= i;
+        }
+        return ret;
+    };
+
+    const auto combinations = [factorial] (uint64_t n, uint64_t k)
+    {
+        return factorial(n) / (factorial(k) * factorial(n - k));
+    };
+
+    cout_printer(factorial, 5);
+    cout_printer(combinations, 5, 3);
+}
+
+TEST(algorithms, power_set)
+{
+    constexpr int64_t set[] = { 1, 2, 3 };
+    constexpr size_t size = sizeof(set) / sizeof(int64_t);
+    std::vector<std::vector<int64_t>> power_set;
+
+    for (int i = 0; i < size; i++)
+        for (int j = i; j < size; j++)
+        {
+            std::vector<int64_t> subset;
+            for (int k = i; k <= j; k++)
+                subset.push_back(set[k]);
+            power_set.push_back(subset);
+        }
+    power_set.push_back(std::vector<int64_t>());
+    power_set.push_back(std::vector<int64_t>(set, set + size));
+    for (const auto& subset : power_set)
+    {
+        for (const auto& value : subset)
+            std::cout << value << " ";
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+}
+
+TEST(algorithms, testing_something)
+{
+    for (int i = 1; i < 100; i++)
+    {
+        std::cout << "    n^3: " << i * i * i << std::endl;
+        std::cout << "n * 2^n: " << i * std::pow(2, i) << std::endl;
+    }
+    std::cout << std::endl;
 }
