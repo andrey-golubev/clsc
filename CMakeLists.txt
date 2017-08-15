@@ -8,4 +8,5 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -g -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -Wall -Werror")
 
 add_subdirectory(tests)
+add_subdirectory(core)
 add_subdirectory(utilities)
