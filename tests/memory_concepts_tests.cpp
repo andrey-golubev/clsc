@@ -27,6 +27,17 @@ TEST(memory_concepts_tests, fallback_allocator)
     EXPECT_EQ(my_ptr.size, 0);
 }
 
+TEST(memory_concepts_tests, stack_allocator)
+{
+    clsc::stack_allocator<1024> allocator;
+    auto my_ptr = allocator.allocate(SIZE<int>);
+    EXPECT_NE(my_ptr.data, nullptr);
+    EXPECT_EQ(my_ptr.size, SIZE<int>);
+    allocator.deallocate(my_ptr);
+    EXPECT_EQ(my_ptr.data, nullptr);
+    EXPECT_EQ(my_ptr.size, 0);
+}
+
 TEST(memory_concepts_tests, default_allocator)
 {
     clsc::default_allocator allocator;

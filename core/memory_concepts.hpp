@@ -11,11 +11,11 @@
 
 namespace clsc
 {
-    using size_type = std::size_t; // TODO: use 64 bit ints instead of size_t ?
+    using allocators_size_type = std::size_t; // TODO: use 64 bit ints instead of size_t ?
     struct block
     {
         void* data;
-        size_type size;
+        allocators_size_type size;
         bool operator==(const block& other) const
         {
             return this->size == other.size && this->data == other.data;
@@ -25,7 +25,7 @@ namespace clsc
     class null_allocator
     {
     public:
-        block allocate(size_type) { return {nullptr, 0}; }
+        block allocate(allocators_size_type) { return {nullptr, 0}; }
         void deallocate(block& blk) { assert(blk.data == nullptr); }
         bool owns(const block& blk) { return blk.data == nullptr; }
     };
@@ -33,7 +33,7 @@ namespace clsc
     class malloc_allocator
     {
     public:
-        block allocate(size_type size)
+        block allocate(allocators_size_type size)
         {
             block blk = {std::malloc(size), size};
             m_owned_data.push_back(blk);
@@ -57,7 +57,7 @@ namespace clsc
     class fallback_allocator : private PrimaryAllocator, private FallbackAllocator
     {
     public:
-        block allocate(size_type size)
+        block allocate(allocators_size_type size)
         {
             block blk = PrimaryAllocator::allocate(size);
             if (blk.data == nullptr)
@@ -85,27 +85,27 @@ namespace clsc
 
     namespace __private
     {
-        constexpr static size_type __default_stack_alloc_size = 8192;
+        constexpr static allocators_size_type __default_stack_alloc_size = 8192;
     }
-    template<size_type n>
+    template<allocators_size_type container_size>
     class stack_allocator
     {
         using single_byte = char;
-        single_byte m_storage[n];
+        single_byte m_storage[container_size];
         single_byte* m_pos;
 
-        int align(size_type s)
+        int align(allocators_size_type s)
         {
-            // bad cast and +1 - to not have issues when log2(s) returns 0
-            auto power = uint64_t(std::log2(s));
-            return std::pow(2, power + 1);
+            auto power = std::ceil(std::log2(s));
+            power = power > 0? power : 1; // when std::ceil returns 0 (e.g. log2(1))
+            return std::pow(2, power);
         }
     public:
         stack_allocator() : m_pos(m_storage) {}
-        block allocate(size_type s)
+        block allocate(allocators_size_type s)
         {
             const auto s_after_aligned = align(s);
-            if (s_after_aligned > (m_storage + n) - m_pos)
+            if (s_after_aligned > (m_storage + container_size) - m_pos)
             {
                 return {nullptr, 0};
             }
@@ -124,7 +124,7 @@ namespace clsc
         }
         bool owns(const block& blk)
         {
-            return blk.data >= m_storage && blk.data < m_storage + n;
+            return blk.data >= m_storage && blk.data < m_storage + container_size;
         }
         void deallocate_all()
         {
