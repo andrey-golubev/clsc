@@ -32,7 +32,6 @@ TEST(comparable_tests, multiple_inheritance)
         operator_mock(int val) : m_val(val) {}
         int operator()(const operator_mock& rhs)
         {
-            auto r = m_val - rhs.m_val;
             return m_val - rhs.m_val;
         }
     };
