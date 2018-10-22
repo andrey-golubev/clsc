@@ -1,6 +1,5 @@
 #include <helpers.hpp>
 #include <gtest/gtest.h>
-#include <gmock/gmock.h>
 
 TEST(helpers_tests, split_string)
 {

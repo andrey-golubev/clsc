@@ -1,6 +1,5 @@
 #include <clear.hpp>
 #include <gtest/gtest.h>
-#include <gmock/gmock.h>
 
 #include <cstring>
 #include <list>
@@ -18,11 +17,12 @@ TEST(clear_tests, scalar_type)
 TEST(clear_tests, array_type)
 {
     int val[] = { 1, 2, 3, 4, 5 };
+    int zeros[] = { 0, 0, 0, 0, 0 };
     clsc::clear(val);
-    ASSERT_THAT(val, ::testing::ElementsAre(0, 0, 0, 0, 0)) << "wrong default clear for array";
+    ASSERT_EQ(*zeros, *val) << "wrong default clear for array";
+    int same[] = { 1, 2, 3, 4, 5 };
     clsc::clear<int[sizeof(val)/sizeof(val[0])]>(val, [](auto& o) { o[0] = 1; o[1] = 2; o[2] = 3; o[3] = 4; o[4] = 5; });
-    ASSERT_THAT(val, ::testing::ElementsAre(1, 2, 3, 4, 5)) << "wrong custom clear for array";
-
+    ASSERT_EQ(*same, *val) << "wrong custom clear for array";
 }
 
 TEST(clear_tests, pod_object_type)
