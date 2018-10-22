@@ -1,0 +1,15 @@
+language: python
+python:
+  - "3.6"
+os: linux
+script:
+  - script/test.py
+
+addons:
+  apt:
+    sources:
+      - george-edison55-precise-backports
+    packages:
+      - cmake-data
+      - cmake
+      - gtest
