@@ -15,5 +15,11 @@ if (${WITH_ASAN})
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libasan")
 endif (${WITH_ASAN})
 
+# gtest
+set(BUILD_GMOCK OFF CACHE BOOL "Exclude gmock from build")
+set(INSTALL_GTEST OFF CACHE BOOL "Do not install gtest")
+add_subdirectory(external/googletest)
+
+# clsc
 add_subdirectory(tests)
 add_subdirectory(utilities)
