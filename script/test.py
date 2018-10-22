@@ -28,7 +28,7 @@ def run_steps(steps, work_dir='.'):
         sys.stdout.flush()
 
 
-def build(debug, raw_args, work_dir='.'):
+def test(debug, raw_args, work_dir='.'):
     t = 'DEBUG' if debug else 'RELEASE'
     build_type = '-DCMAKE_BUILD_TYPE={t}'.format(t=t)
     steps = """
@@ -46,7 +46,7 @@ def main():
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
         os.makedirs(workdir)
-    build(args.debug, args.raw_cmake, workdir)
+    test(args.debug, args.raw_cmake, workdir)
     return 0
 
 
