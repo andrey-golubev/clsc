@@ -16,5 +16,6 @@ cd clsc
 python3 script/test.py
 ~~~
 
-> Note: googletest[https://github.com/google/googletest] is used a submodule. Thus, it is required to clone it in order to build and run
-repository tests
+> Note: [googletest](https://github.com/google/googletest) is used as a
+**git submodule**. Thus, it is required to clone it in order to build and run
+repository tests.
