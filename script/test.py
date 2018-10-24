@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Copyright 2018 Andrey Golubev
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,8 +27,6 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#!/usr/bin/env python3
 
 import argparse
 import os
