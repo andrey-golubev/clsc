@@ -5,6 +5,9 @@ os: linux
 script:
   - script/test.py
 
+git:
+  submodules: true
+
 addons:
   apt:
     sources:
@@ -12,4 +15,7 @@ addons:
     packages:
       - cmake-data
       - cmake
-      - gtest
+      - gcc-8
+      - g++-8
+      - libasan
+      - libubsan
