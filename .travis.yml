@@ -4,6 +4,7 @@ python:
 os: linux
 script:
   - script/test.py
+sudo: required
 
 git:
   submodules: true
@@ -15,7 +16,11 @@ addons:
     packages:
       - cmake-data
       - cmake
-      - gcc-8
-      - g++-8
       - libasan
       - libubsan
+
+
+before_script:
+  sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+  sudo apt-get update
+  sudo apt-get install gcc-6 g++-6
