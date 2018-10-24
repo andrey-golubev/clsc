@@ -1,6 +1,10 @@
+CLSC (Cute Little Software Capital)
+===
+
+[![Coverity Scan Build Status](https://scan.coverity.com/projects/17074/badge.svg)](https://scan.coverity.com/projects/clsc)
+
 [![Build Status](https://travis-ci.com/andrgolubev/clsc.svg?branch=master)](https://travis-ci.com/andrgolubev/clsc)
 
-# CLSC (Cute Little Software Capital)
 
 ## About
 
