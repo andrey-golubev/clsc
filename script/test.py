@@ -45,7 +45,7 @@ def main():
     workdir = os.path.join(os.path.dirname(__file__), '..', 'build')
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
-        os.makedirs(workdir)
+    os.makedirs(workdir)
     cmake_args = args.cmake
     for i, arg in enumerate(cmake_args):
         if not arg.startswith('-D'):
