@@ -16,11 +16,8 @@ addons:
     packages:
       - cmake-data
       - cmake
-      - libasan
-      - libubsan
-
 
 before_script:
-  sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-  sudo apt-get update
-  sudo apt-get install gcc-6 g++-6
+  - sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+  - sudo apt-get update
+  - sudo apt-get install gcc-6 g++-6
