@@ -65,8 +65,6 @@ namespace clsc
     };
 
 
-
-
     template<typename ObjT>
     static void clear(ObjT& o)
     {
