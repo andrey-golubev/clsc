@@ -1,6 +1,5 @@
 #include <memory_concepts.hpp>
 #include <gtest/gtest.h>
-#include <gmock/gmock.h>
 
 namespace
 {

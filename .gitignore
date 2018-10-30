@@ -3,3 +3,5 @@ CMakeCache*
 *.user
 Makefile
 *.*~
+.vscode/
+build/
