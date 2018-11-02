@@ -36,11 +36,14 @@ import shutil
 
 
 def parse_args():
-    parser = argparse.ArgumentParser('Command-line options for build script')
+    parser = argparse.ArgumentParser('Command-line options for build script',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--rebuild', action='store_true', default=False,
+        help='Rebuild.')
     parser.add_argument('--debug', action='store_true', default=False,
-        help='Specify whether debug build should be use')
-    parser.add_argument('--cmake', default='', nargs='*',
-        help='Pass raw arguments to cmake')
+        help='Build in debug mode.')
+    parser.add_argument('--cmake-args', default=[], nargs='*',
+        help='Pass raw arguments to cmake.')
     return parser.parse_args()
 
 
@@ -50,20 +53,19 @@ def run_steps(steps, work_dir='.'):
         step = step.strip()
         if not step:
             continue
-        step_name = step.split(' ')[0]
-        sys.stdout.write('[{name}]\n'.format(name=step_name))
+        sys.stdout.write('[{command}]\n'.format(command=step))
         subprocess.check_call(step, shell=True, cwd=work_dir)
         sys.stdout.flush()
 
 
-def test(debug, cmake_args, work_dir='.'):
-    t = 'DEBUG' if debug else 'RELEASE'
-    build_type = '-DCMAKE_BUILD_TYPE={t}'.format(t=t)
+def test(debug_mode, cmake_args, work_dir='.'):
+    if debug_mode:
+        cmake_args.append('-DCMAKE_BUILD_TYPE=DEBUG')
     steps = """
-    cmake {build_type} {args} ..
+    cmake {args} ..
     make VERBOSE=1
     ./tests/clsc_tests
-    """.format(build_type=build_type, args=cmake_args)
+    """.format(args=' '.join(cmake_args))
     run_steps(steps, work_dir=work_dir)
 
 
@@ -71,10 +73,11 @@ def main():
     """Main entrypoint"""
     args = parse_args()
     workdir = os.path.join(os.path.dirname(__file__), '..', 'build')
-    if os.path.exists(workdir):
-        shutil.rmtree(workdir)
-    os.makedirs(workdir)
-    cmake_args = args.cmake
+    if args.rebuild:
+        if os.path.exists(workdir):
+            shutil.rmtree(workdir)
+        os.makedirs(workdir)
+    cmake_args = args.cmake_args
     for i, arg in enumerate(cmake_args):
         if not arg.startswith('-D'):
             cmake_args[i] = '-D' + arg
