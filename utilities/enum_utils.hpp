@@ -36,8 +36,8 @@
 
 namespace clsc
 {
-#define VAARGS_LEN(utype, ...) \
-    (sizeof((utype[]){__VA_ARGS__}) / sizeof(utype))
+#define VAARGS_LEN(type, ...) \
+    (sizeof((type[]){__VA_ARGS__}) / sizeof(type))
 
 #define MAKE_ENUM(name, ...) \
     enum name { \

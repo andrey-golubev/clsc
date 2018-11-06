@@ -31,12 +31,18 @@
 
 #include <array>
 
-MAKE_ENUM(test_enum, a, b, c);
-
-TEST(enum_utils_tests, create_enum) {
+MAKE_ENUM(test_enum, a, b, c)
+TEST(enum_utils_tests, make_any_enum) {
     std::array<test_enum, 3> values = {
         test_enum::a, test_enum::b, test_enum::c };
     EXPECT_EQ(values, values_of_test_enum());
     EXPECT_TRUE(belongs_to_test_enum(0));
     EXPECT_FALSE(belongs_to_test_enum(3));
+}
+
+MAKE_ENUM(empty_enum)
+TEST(enum_utils_tests, make_empty_enum) {
+    EXPECT_EQ(0, values_of_empty_enum().size());
+    EXPECT_FALSE(belongs_to_empty_enum(0));
+    EXPECT_FALSE(belongs_to_empty_enum(3));
 }
