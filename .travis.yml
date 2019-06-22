@@ -3,7 +3,7 @@ python:
   - "3.6"
 os: linux
 script:
-  - script/test.py
+  - script/test.py --rebuild
 sudo: required
 
 git:

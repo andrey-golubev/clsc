@@ -1,4 +1,4 @@
-// Copyright 2018 Andrey Golubev
+// Copyright 2018-2019 Andrey Golubev
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -31,102 +31,85 @@
 
 #include "common.hpp"
 
-TEST(comparable_tests, simple_inheritance)
-{
-    class A : public clsc::comparable<A>
-    {
-        int m_val;
-    public:
-        A() = delete;
-        A(const int& val) : m_val(val) {}
+#define UNUSED(x) (void)x;
 
-        int operator()(const A& rhs)
-        {
-            return m_val - rhs.m_val;
-        }
-    };
+TEST(comparable_tests, simple_inheritance) {
+  class A : public clsc::comparable<A> {
+    int m_val = 0;
 
-    A a(1), b(2);
-    tests_common::compare(a, b);
+  public:
+    A() = delete;
+    A(const int &val) : m_val(val) {}
+
+    int operator()(const A &rhs) { return m_val - rhs.m_val; }
+  };
+
+  A a(1), b(2);
+  tests_common::compare(a, b);
 }
 
-TEST(comparable_tests, multiple_inheritance)
-{
-    class operator_mock
-    {
-        int m_val;
-    public:
-        operator_mock() = delete;
-        operator_mock(int val) : m_val(val) {}
-        int operator()(const operator_mock& rhs)
-        {
-            return m_val - rhs.m_val;
-        }
-    };
+TEST(comparable_tests, multiple_inheritance) {
+  class operator_mock {
+    int m_val = 0;
 
-    class A : public clsc::comparable<A>, public operator_mock
-    {
-    public:
-        A() = delete;
-        A(int val) : operator_mock(val) {}
-    };
+  public:
+    operator_mock() = delete;
+    operator_mock(int val) : m_val(val) {}
+    int operator()(const operator_mock &rhs) { return m_val - rhs.m_val; }
+  };
 
-    A a(1), b(2);
-    tests_common::compare(a, b);
+  class A : public clsc::comparable<A>, public operator_mock {
+  public:
+    A() = delete;
+    A(int val) : operator_mock(val) {}
+  };
+
+  A a(1), b(2);
+  tests_common::compare(a, b);
 }
 
-TEST(comparable_tests, multilevel_inheritance)
-{
-    class operator_mock : public clsc::comparable<operator_mock>
-    {
-        int m_val;
-    public:
-        operator_mock() = delete;
-        operator_mock(int val) : m_val(val) {}
-        int operator()(const operator_mock& rhs)
-        {
-            return m_val - rhs.m_val;
-        }
-    };
+TEST(comparable_tests, multilevel_inheritance) {
+  class operator_mock : public clsc::comparable<operator_mock> {
+    int m_val = 0;
 
-    class A : public operator_mock
-    {
-    public:
-        A() = delete;
-        A(int val) : operator_mock(val) {}
-    };
+  public:
+    operator_mock() = delete;
+    operator_mock(int val) : m_val(val) {}
+    int operator()(const operator_mock &rhs) { return m_val - rhs.m_val; }
+  };
 
-    A a(1), b(2);
-    tests_common::compare(a, b);
+  class A : public operator_mock {
+  public:
+    A() = delete;
+    A(int val) : operator_mock(val) {}
+  };
+
+  A a(1), b(2);
+  tests_common::compare(a, b);
 }
 
-TEST(adjustable_comparable_tests, operator_exists)
-{
-    class A : public clsc::adjustable_comparable<A>
-    {
-        int m_val;
-    public:
-        A() = delete;
-        A(const int& val) : m_val(val) {}
+TEST(adjustable_comparable_tests, operator_exists) {
+  class A : public clsc::adjustable_comparable<A> {
+    int m_val = 0;
 
-        int operator()(const A& rhs)
-        {
-            return m_val - rhs.m_val;
-        }
-    };
+  public:
+    A() = delete;
+    A(const int &val) : m_val(val) {}
 
-    A a(1), b(2);
-    tests_common::compare(a, b);
+    int operator()(const A &rhs) { return m_val - rhs.m_val; }
+  };
+
+  A a(1), b(2);
+  tests_common::compare(a, b);
 }
 
-TEST(adjustable_comparable_tests, no_operator)
-{
-    class A : public clsc::adjustable_comparable<A>
-    {
-        int m_val;
-    public:
-        A() = delete;
-        A(const int& val) : m_val(val) {}
-    };
-    A a(1), b(2);
+TEST(adjustable_comparable_tests, no_operator) {
+  class A : public clsc::adjustable_comparable<A> {
+    int m_val = 0;
+
+  public:
+    A() = delete;
+    A(const int &val) : m_val(val) { UNUSED(m_val); }
+  };
+  A a(1), b(2);
 }
