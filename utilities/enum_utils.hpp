@@ -29,30 +29,24 @@
 #ifndef _ENUM_UTILS_HPP_
 #define _ENUM_UTILS_HPP_
 
-#include <array>
 #include <algorithm>
-#include <type_traits>
+#include <array>
 #include <cstdint>
+#include <type_traits>
 
-namespace clsc
-{
-#define VAARGS_LEN(type, ...) \
-    (sizeof((type[]){__VA_ARGS__}) / sizeof(type))
+namespace clsc {
+#define VAARGS_LEN(...) (sizeof((char[]){__VA_ARGS__}) / sizeof(char))
 
-#define MAKE_ENUM(name, ...) \
-    enum name { \
-        __VA_ARGS__ \
-    }; \
-    const auto& values_of_##name() { \
-        static std::array<name, VAARGS_LEN(uint8_t, __VA_ARGS__)> values = { \
-             __VA_ARGS__ }; \
-        return values; \
-    } \
-    bool belongs_to_##name(uint8_t value) { \
-        const auto& values = values_of_##name(); \
-        return std::find( \
-            values.cbegin(), values.cend(), value) != values.cend(); \
-    }
-}
+#define MAKE_ENUM(name, ...)                                                   \
+  enum name { __VA_ARGS__ };                                                   \
+  const auto &values_of_##name() {                                             \
+    static std::array<name, VAARGS_LEN(__VA_ARGS__)> values = {__VA_ARGS__};   \
+    return values;                                                             \
+  }                                                                            \
+  bool belongs_to_##name(uint64_t value) {                                     \
+    const auto &values = values_of_##name();                                   \
+    return std::find(values.cbegin(), values.cend(), value) != values.cend();  \
+  }
+} // namespace clsc
 
 #endif // _ENUM_UTILS_HPP_
