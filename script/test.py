@@ -37,13 +37,13 @@ import shutil
 
 def parse_args():
     parser = argparse.ArgumentParser('Command-line options for build script',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--rebuild', action='store_true', default=False,
-        help='Rebuild.')
+                        help='Rebuild.')
     parser.add_argument('--debug', action='store_true', default=False,
-        help='Build in debug mode.')
+                        help='Build in debug mode.')
     parser.add_argument('--cmake-args', default=[], nargs='*',
-        help='Pass raw arguments to cmake.')
+                        help='Pass raw arguments to cmake.')
     return parser.parse_args()
 
 
