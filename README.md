@@ -14,7 +14,7 @@ work on quite interesting features not currently available in `master`.
 ## Fast start
 
 ~~~bash
-git clone https://github.com/andrgolubev/clsc.git --recursive
+git clone https://github.com/andrey-golubev/clsc.git --recursive
 cd clsc
 python3 script/test.py
 ~~~
