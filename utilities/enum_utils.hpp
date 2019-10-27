@@ -37,16 +37,16 @@
 namespace clsc {
 #define VAARGS_LEN(...) (sizeof((char[]){__VA_ARGS__}) / sizeof(char))
 
-#define MAKE_ENUM(name, ...)                                                   \
-  enum name { __VA_ARGS__ };                                                   \
-  const auto &values_of_##name() {                                             \
-    static std::array<name, VAARGS_LEN(__VA_ARGS__)> values = {__VA_ARGS__};   \
-    return values;                                                             \
-  }                                                                            \
-  bool belongs_to_##name(uint64_t value) {                                     \
-    const auto &values = values_of_##name();                                   \
-    return std::find(values.cbegin(), values.cend(), value) != values.cend();  \
-  }
-} // namespace clsc
+#define MAKE_ENUM(name, ...)                                                                       \
+    enum name { __VA_ARGS__ };                                                                     \
+    const auto& values_of_##name() {                                                               \
+        static std::array<name, VAARGS_LEN(__VA_ARGS__)> values = {__VA_ARGS__};                   \
+        return values;                                                                             \
+    }                                                                                              \
+    bool belongs_to_##name(uint64_t value) {                                                       \
+        const auto& values = values_of_##name();                                                   \
+        return std::find(values.cbegin(), values.cend(), value) != values.cend();                  \
+    }
+}  // namespace clsc
 
-#endif // _ENUM_UTILS_HPP_
+#endif  // _ENUM_UTILS_HPP_
