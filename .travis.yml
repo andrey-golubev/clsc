@@ -1,3 +1,5 @@
+# Travis CI config:
+# running from python script (single line)
 language: python
 python:
   - "3.6"
