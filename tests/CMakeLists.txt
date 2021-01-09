@@ -1,4 +1,4 @@
-# Copyright 2018 Andrey Golubev
+# Copyright 2018-2020 Andrey Golubev
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -36,6 +36,7 @@ add_executable(${PROJECT_NAME}
     comparable_tests.cpp
     helpers_tests.cpp
     enum_utils_tests.cpp
+    count_until_tests.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} clsc_utils gtest pthread)
+target_link_libraries(${PROJECT_NAME} clsc_utils clsc_algorithm gtest pthread)

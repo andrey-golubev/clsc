@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Andrey Golubev
+# Copyright 2020 Andrey Golubev
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -27,32 +27,15 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 cmake_minimum_required(VERSION 2.8)
-project(clsc)
+project(clsc_algorithm)
 
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_EXTENSIONS OFF)
+file(GLOB
+    ALGORITHM_SRCS
+    *.hpp
+)
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -g -O0 -Wall -Werror")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -Wall -Werror")
+add_library(${PROJECT_NAME} STATIC ${ALGORITHM_SRCS})
 
-option(WITH_ASAN "Enable ASan build flags" OFF)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-if (${WITH_ASAN})
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=leak -fsanitize=undefined")
-  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libsan")
-  elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libasan")
-  endif()
-endif (${WITH_ASAN})
-
-# gtest
-set(BUILD_GMOCK OFF CACHE BOOL "Exclude gmock from build")
-set(INSTALL_GTEST OFF CACHE BOOL "Do not install gtest")
-add_subdirectory(external/googletest)
-
-# clsc
-add_subdirectory(utilities)
-add_subdirectory(algorithm)
-add_subdirectory(tests)
+set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
