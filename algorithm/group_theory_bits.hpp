@@ -1,4 +1,4 @@
-// Copyright 2018-2021 Andrey Golubev
+// Copyright 2021 Andrey Golubev
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -28,15 +28,23 @@
 
 #pragma once
 
-namespace tests_common {
-template<typename T> void compare(T&& a, T&& b) {
-    EXPECT_FALSE(a == b);
-    EXPECT_TRUE(a != b);
+#include <functional>
 
-    EXPECT_TRUE(a < b);
-    EXPECT_TRUE(a <= b);
+namespace clsc {
+namespace detail {
 
-    EXPECT_FALSE(a > b);
-    EXPECT_FALSE(a >= b);
+template<typename Integer> bool odd(Integer x) { return bool(x & 0x1); }
+
+template<typename Integer> Integer half(Integer x) { return x / 2; }
+
+template<typename Regular> Regular identity_element(std::plus<Regular>) { return Regular(0); }
+template<typename Regular> Regular identity_element(std::multiplies<Regular>) { return Regular(1); }
+template<typename Regular> std::negate<Regular> inverse_element(std::plus<Regular>) {
+    return std::negate<Regular>{};
 }
-}  // namespace tests_common
+template<typename Regular> decltype(auto) inverse_element(std::multiplies<Regular>) {
+    return [](Regular x) { return Regular(1) / x; };
+}
+
+}  // namespace detail
+}  // namespace clsc
