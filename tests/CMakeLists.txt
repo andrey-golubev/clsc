@@ -38,6 +38,7 @@ add_executable(${PROJECT_NAME}
     enum_utils_tests.cpp
     count_until_tests.cpp
     algorithm_tests.cpp
+    fibonacci_tests.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} clsc_utils clsc_algorithm gtest pthread)
