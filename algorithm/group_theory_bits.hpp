@@ -43,7 +43,12 @@ template<typename Regular> std::negate<Regular> inverse_element(std::plus<Regula
     return std::negate<Regular>{};
 }
 template<typename Regular> decltype(auto) inverse_element(std::multiplies<Regular>) {
-    return [](Regular x) { return Regular(1) / x; };
+    return [](Regular x) {
+        if (x == Regular(0)) {
+            return x;
+        }
+        return Regular(1) / x;
+    };
 }
 
 }  // namespace detail

@@ -47,13 +47,21 @@ template<typename T> bool are_equal(T a, T b, int units_in_last_place = 2) {
 template<typename ValueType, typename DistributionType, typename GroupOperation,
          typename TestOperation>
 void power_group_test_template(GroupOperation op, TestOperation test_op, int multiplier_max,
-                               ValueType value_max) {
+                               ValueType value_max, bool negate_multiplier = false,
+                               bool negate_value = false) {
     std::array<int, 12> multipliers{};
     std::array<ValueType, 12> values{};
 
     std::mt19937 generator{};  // not using random device as seed to have reproducibility
-    std::uniform_int_distribution<> multiplier_distribution(2, multiplier_max);
-    DistributionType value_distribution(ValueType(2), ValueType(value_max));
+    int multiplier_a, multiplier_b;
+    std::tie(multiplier_a, multiplier_b) = negate_multiplier ? std::make_tuple(-multiplier_max, -2)
+                                                             : std::make_tuple(2, multiplier_max);
+    std::uniform_int_distribution<> multiplier_distribution(multiplier_a, multiplier_b);
+    ValueType value_a, value_b;
+    std::tie(value_a, value_b) = negate_value
+                                     ? std::make_tuple(-ValueType(value_max), -ValueType(2))
+                                     : std::make_tuple(ValueType(2), ValueType(value_max));
+    DistributionType value_distribution(value_a, value_b);
 
     for (int i = 0; i < 10; ++i) {
         multipliers[i] = multiplier_distribution(generator);
@@ -61,8 +69,8 @@ void power_group_test_template(GroupOperation op, TestOperation test_op, int mul
     }
 
     // special cases:
-    multipliers[10] = 1;
-    values[10] = ValueType(1);
+    multipliers[10] = negate_multiplier ? -1 : 1;
+    values[10] = negate_value ? -ValueType(1) : ValueType(1);
     multipliers[11] = 0;
     values[11] = ValueType(0);
 
@@ -84,18 +92,50 @@ void power_group_test_template(GroupOperation op, TestOperation test_op, int mul
 
 TEST(power_tests, multiply_integers) {
     power_group_test_template<int, std::uniform_int_distribution<int>>(
-        std::plus<int>{}, std::multiplies<int>{}, 100, 1000);
+        std::plus<int>{}, std::multiplies<int>{}, 100, 1000, false, false);
+    power_group_test_template<int, std::uniform_int_distribution<int>>(
+        std::plus<int>{}, std::multiplies<int>{}, 100, 1000, true, false);
+    power_group_test_template<int, std::uniform_int_distribution<int>>(
+        std::plus<int>{}, std::multiplies<int>{}, 100, 1000, false, true);
+    power_group_test_template<int, std::uniform_int_distribution<int>>(
+        std::plus<int>{}, std::multiplies<int>{}, 100, 1000, true, true);
 }
 TEST(power_tests, multiply_doubles) {
     power_group_test_template<double, std::uniform_real_distribution<double>>(
-        std::plus<double>{}, std::multiplies<double>{}, 100, 1000);
+        std::plus<double>{}, std::multiplies<double>{}, 100, 1000, false, false);
+    power_group_test_template<double, std::uniform_real_distribution<double>>(
+        std::plus<double>{}, std::multiplies<double>{}, 100, 1000, true, false);
+    power_group_test_template<double, std::uniform_real_distribution<double>>(
+        std::plus<double>{}, std::multiplies<double>{}, 100, 1000, false, true);
+    power_group_test_template<double, std::uniform_real_distribution<double>>(
+        std::plus<double>{}, std::multiplies<double>{}, 100, 1000, true, true);
 }
 
 TEST(power_tests, raise_integers_to_power) {
     power_group_test_template<int, std::uniform_int_distribution<int>>(
-        std::multiplies<int>{}, [](int v, int m) { return std::round(std::pow(v, m)); }, 5, 31);
+        std::multiplies<int>{}, [](int v, int m) { return int(std::pow(v, m)); }, 5, 31, false,
+        false);
+    power_group_test_template<int, std::uniform_int_distribution<int>>(
+        std::multiplies<int>{}, [](int v, int m) { return int(std::pow(v, m)); }, 5, 31, true,
+        false);
+    power_group_test_template<int, std::uniform_int_distribution<int>>(
+        std::multiplies<int>{}, [](int v, int m) { return int(std::pow(v, m)); }, 5, 31, false,
+        true);
+    power_group_test_template<int, std::uniform_int_distribution<int>>(
+        std::multiplies<int>{}, [](int v, int m) { return int(std::pow(v, m)); }, 5, 31, true,
+        true);
 }
 TEST(power_tests, raise_doubles_to_power) {
     power_group_test_template<double, std::uniform_real_distribution<double>>(
-        std::multiplies<double>{}, [](double v, double m) { return std::pow(v, m); }, 5, 31.0);
+        std::multiplies<double>{}, [](double v, double m) { return std::pow(v, m); }, 5, 31.0,
+        false, false);
+    power_group_test_template<double, std::uniform_real_distribution<double>>(
+        std::multiplies<double>{}, [](double v, double m) { return std::pow(v, m); }, 3, 31.0, true,
+        false);
+    power_group_test_template<double, std::uniform_real_distribution<double>>(
+        std::multiplies<double>{}, [](double v, double m) { return std::pow(v, m); }, 5, 31.0,
+        false, true);
+    power_group_test_template<double, std::uniform_real_distribution<double>>(
+        std::multiplies<double>{}, [](double v, double m) { return std::pow(v, m); }, 5, 31.0, true,
+        true);
 }
