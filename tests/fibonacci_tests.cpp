@@ -1,4 +1,4 @@
-// Copyright 2018-2021 Andrey Golubev
+// Copyright 2021 Andrey Golubev
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -26,17 +26,48 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#pragma once
+#include <fibonacci.hpp>
 
-namespace tests_common {
-template<typename T> void compare(T&& a, T&& b) {
-    EXPECT_FALSE(a == b);
-    EXPECT_TRUE(a != b);
+#include <gtest/gtest.h>
 
-    EXPECT_TRUE(a < b);
-    EXPECT_TRUE(a <= b);
+#include <numeric>
 
-    EXPECT_FALSE(a > b);
-    EXPECT_FALSE(a >= b);
+TEST(fibonacci_tests, zero) {
+    const std::uint64_t expected = 0;
+    EXPECT_EQ(expected, clsc::fibonacci(0));
 }
-}  // namespace tests_common
+
+TEST(fibonacci_tests, one) {
+    const std::uint64_t expected = 1;
+    EXPECT_EQ(expected, clsc::fibonacci(1));
+}
+
+TEST(fibonacci_tests, two) {
+    const std::uint64_t expected = 1;
+    EXPECT_EQ(expected, clsc::fibonacci(2));
+}
+
+TEST(fibonacci_tests, three) {
+    const std::uint64_t expected = 2;
+    EXPECT_EQ(expected, clsc::fibonacci(3));
+}
+
+TEST(fibonacci_tests, four) {
+    const std::uint64_t expected = 3;
+    EXPECT_EQ(expected, clsc::fibonacci(4));
+}
+
+TEST(fibonacci_tests, five) {
+    const std::uint64_t expected = 5;
+    EXPECT_EQ(expected, clsc::fibonacci(5));
+}
+
+TEST(fibonacci_tests, random_inputs) {
+    int array_of_n[65] = {};
+    std::iota(std::begin(array_of_n), std::end(array_of_n), 6);
+
+    for (int n : array_of_n) {
+        const std::uint64_t expected = clsc::fibonacci(n - 1) + clsc::fibonacci(n - 2);
+        EXPECT_EQ(expected, clsc::fibonacci(n));
+    }
+}
