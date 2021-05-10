@@ -37,24 +37,56 @@
 TEST(count_until_tests, empty_collection) {
     const std::vector<int> collection{};
     const auto always_false = [](int) { return false; };
-    EXPECT_EQ(0, clsc::count_until(collection.cbegin(), collection.cend(), always_false));
+    EXPECT_EQ(0, clsc::count_until(collection.cbegin(), collection.cend(), always_false).second);
+    EXPECT_EQ(0, clsc::count_until_n(collection.cbegin(), collection.size(), always_false).second);
 }
 
-// TODO: add type tests?
 TEST(count_until_tests, simple_condition) {
     const std::list<int> collection{1, 2, 3, 4, 5};
     const auto value_in_range = [](int e) { return e > 2 && e < 4; };
-    auto expected = std::distance(
-        collection.cbegin(), std::find_if(collection.cbegin(), collection.cend(), value_in_range));
-    auto counted = clsc::count_until(collection.cbegin(), collection.cend(), value_in_range);
-    EXPECT_EQ(expected, counted);
+
+    auto expected_iterator = std::find_if(collection.cbegin(), collection.cend(), value_in_range);
+    auto expected = std::distance(collection.cbegin(), expected_iterator);
+
+    {
+        auto actual_pair =
+            clsc::count_until(collection.cbegin(), collection.cend(), value_in_range);
+        auto actual_iterator = actual_pair.first;
+        auto actual = actual_pair.second;
+
+        EXPECT_EQ(expected_iterator, actual_iterator);
+        EXPECT_EQ(expected, actual);
+    }
+
+    {
+        auto actual_pair =
+            clsc::count_until_n(collection.cbegin(), collection.size(), value_in_range);
+        auto actual_iterator = actual_pair.first;
+        auto actual = actual_pair.second;
+
+        EXPECT_EQ(expected_iterator, actual_iterator);
+        EXPECT_EQ(expected, actual);
+    }
 }
 
 TEST(count_until_tests, always_false_condition) {
     const std::vector<int> collection{1, 2, 3, 4, 5};
     const auto always_false = [](int) { return false; };
-    EXPECT_EQ(collection.size(),
-              clsc::count_until(collection.cbegin(), collection.cend(), always_false));
+
+    {
+        auto actual_pair = clsc::count_until(collection.cbegin(), collection.cend(), always_false);
+
+        EXPECT_EQ(collection.cend(), actual_pair.first);
+        EXPECT_EQ(collection.size(), actual_pair.second);
+    }
+
+    {
+        auto actual_pair =
+            clsc::count_until_n(collection.cbegin(), collection.size(), always_false);
+
+        EXPECT_EQ(collection.cend(), actual_pair.first);
+        EXPECT_EQ(collection.size(), actual_pair.second);
+    }
 }
 
 TEST(count_until_tests, date_time) {
@@ -64,7 +96,8 @@ TEST(count_until_tests, date_time) {
         const auto not_date_symbols = [](char c) {
             return !(c == '-' || std::isdigit(static_cast<unsigned char>(c)));
         };
-        date_count = clsc::count_until(date_time.cbegin(), date_time.cend(), not_date_symbols);
+        date_count =
+            clsc::count_until(date_time.cbegin(), date_time.cend(), not_date_symbols).second;
         EXPECT_EQ(10, date_count);
     }
     {
@@ -72,7 +105,8 @@ TEST(count_until_tests, date_time) {
             return !(c == '.' || std::isdigit(static_cast<unsigned char>(c)));
         };
         auto counted = clsc::count_until(date_time.cbegin() + date_count + 1, date_time.cend(),
-                                         not_time_symbols);
+                                         not_time_symbols)
+                           .second;
         EXPECT_EQ(5, counted);
     }
 }

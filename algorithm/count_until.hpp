@@ -29,21 +29,34 @@
 #pragma once
 
 #include <iterator>
+#include <utility>
 
 /**
  * \file count_until.hpp
- * \brief File defines count_until algorithm.
+ * \brief File defines count_until algorithms.
  */
 namespace clsc {
 template<typename InputIt, typename UnaryPredicate>
-typename std::iterator_traits<InputIt>::difference_type count_until(InputIt first, InputIt last,
-                                                                    UnaryPredicate p) {
+std::pair<InputIt, typename std::iterator_traits<InputIt>::difference_type>
+count_until(InputIt first, InputIt last, UnaryPredicate p) {
     typename std::iterator_traits<InputIt>::difference_type ret = 0;
-    for (; first != last; ++first, ret++) {
+    for (; first != last; ++first, ++ret) {
         if (p(*first)) {
             break;
         }
     }
-    return ret;
+    return {first, ret};
+}
+
+template<typename InputIt, typename N, typename UnaryPredicate>
+std::pair<InputIt, typename std::iterator_traits<InputIt>::difference_type>
+count_until_n(InputIt first, N n, UnaryPredicate p) {
+    typename std::iterator_traits<InputIt>::difference_type ret = 0;
+    for (; n--; ++first, ++ret) {
+        if (p(*first)) {
+            break;
+        }
+    }
+    return {first, ret};
 }
 }  // namespace clsc
