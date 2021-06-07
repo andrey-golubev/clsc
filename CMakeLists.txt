@@ -55,4 +55,5 @@ add_subdirectory(external/googletest)
 # clsc
 add_subdirectory(utilities)
 add_subdirectory(algorithm)
+add_subdirectory(applications)
 add_subdirectory(tests)

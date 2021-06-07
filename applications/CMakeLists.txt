@@ -1,4 +1,4 @@
-# Copyright 2021 Andrey Golubev
+# Copyright 2020 Andrey Golubev
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -27,14 +27,14 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 cmake_minimum_required(VERSION 2.8)
-project(clsc_algorithm)
+project(clsc_applications)
 
 file(GLOB
-    ALGORITHM_SRCS
+    APPLICATIONS_SRCS
     *.hpp
 )
 
-add_library(${PROJECT_NAME} STATIC ${ALGORITHM_SRCS})
+add_library(${PROJECT_NAME} STATIC ${APPLICATIONS_SRCS})
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 

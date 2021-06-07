@@ -57,6 +57,16 @@ Regular power_accumulate_semigroup(Regular r, Regular a, Integer n, SemigroupOpe
 }
 }  // namespace detail
 
+/**
+ * \brief Applies binary operation \a op to \a a \a n times, where \a n is positive.
+ *
+ * Generic power algorithm that applies the binary operation to the value fixed number of times.
+ *
+ * Type requirements:
+ *  Regular - is a regular type
+ *  Integer - is an integral type
+ *  SemigroupOperation - is a binary operation of a semigroup with elements of type Regular
+ */
 template<typename Regular, typename Integer, typename SemigroupOperation>
 Regular power_semigroup(Regular a, Integer n, SemigroupOperation op) {
     assert(n > 0);
@@ -72,6 +82,9 @@ Regular power_semigroup(Regular a, Integer n, SemigroupOperation op) {
     return detail::power_accumulate_semigroup(a, op(a, a), half(n - 1), op);
 }
 
+/**
+ * \brief Applies binary operation \a op to \a a \a n times, where \a n could be equal to 0.
+ */
 template<typename Regular, typename Integer, typename MonoidOperation>
 Regular power_monoid(Regular a, Integer n, MonoidOperation op) {
     assert(n >= 0);
@@ -82,9 +95,11 @@ Regular power_monoid(Regular a, Integer n, MonoidOperation op) {
     return power_semigroup(a, n, op);
 }
 
+/**
+ * \brief Applies binary operation \a op to \a a \a n times, where \a n could be any integral value.
+ */
 template<typename Regular, typename Integer, typename GroupOperation>
 Regular power_group(Regular a, Integer n, GroupOperation op) {
-    // n - any value
     if (n < 0) {
         n = -n;
         using clsc::detail::inverse_element;

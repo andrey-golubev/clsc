@@ -75,7 +75,7 @@ Matrix2x2 identity_element(std::multiplies<Matrix2x2>) { return {1, 0, 0, 1}; }
 
 }  // namespace detail
 
-std::uint64_t fibonacci(std::uint32_t n) {
+std::uint64_t fibonacci(std::uint8_t n) {
     assert(n >= 0);
     if (n == 0)
         return 0;
