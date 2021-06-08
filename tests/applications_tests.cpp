@@ -40,7 +40,7 @@ TEST(matrix, equality) {
     EXPECT_NE(expected, actual);
 }
 
-TEST(matrix, multiply_accumulate_simple) {
+TEST(matrix, multiply_accumulate_square_matrix) {
     clsc::applications::multiply_accumulate_matrix<int, std::plus<int>, std::multiplies<int>> op{};
 
     clsc::applications::Matrix<int> x({{1, 2}, {3, 4}});
@@ -54,5 +54,53 @@ TEST(matrix, multiply_accumulate_simple) {
     auto z = op(x, y);
     EXPECT_EQ(2, z.data().size());
     EXPECT_EQ(2, z.data()[0].size());
-    EXPECT_EQ(z, clsc::applications::Matrix<int>({{19, 22}, {43, 50}}));
+    EXPECT_EQ(clsc::applications::Matrix<int>({{19, 22}, {43, 50}}), z);
+}
+
+TEST(matrix, multiply_accumulate_non_square_matrix) {
+    clsc::applications::multiply_accumulate_matrix<int, std::plus<int>, std::multiplies<int>> op{};
+
+    clsc::applications::Matrix<int> x({{1, 2}, {3, 4}, {5, 6}});
+    clsc::applications::Matrix<int> y({{7}, {8}});
+
+    EXPECT_EQ(3, x.data().size());
+    EXPECT_EQ(2, x.data()[0].size());
+    EXPECT_EQ(2, y.data().size());
+    EXPECT_EQ(1, y.data()[0].size());
+
+    auto z = op(x, y);
+    EXPECT_EQ(3, z.data().size());
+    EXPECT_EQ(1, z.data()[0].size());
+    EXPECT_EQ(clsc::applications::Matrix<int>({{23}, {53}, {83}}), z);
+}
+
+TEST(friends, noop) {
+    clsc::applications::Matrix<bool> friend_matrix(
+        {{true, false, true}, {false, true, false}, {true, false, true}});
+
+    auto same_matrix = clsc::applications::find_friends_n(friend_matrix, 0);
+    EXPECT_EQ(friend_matrix, same_matrix);
+}
+
+TEST(friends, indirect_friends) {
+    // Matrix of the form:
+    /*
+          A  B  C  D
+        A 1  0  1  0
+        B 0  1  1  0
+        C 1  1  1  0
+        D 0  0  0  1
+    */
+    clsc::applications::Matrix<bool> friend_matrix({{true, false, true, false},
+                                                    {false, true, true, false},
+                                                    {true, true, true, false},
+                                                    {false, false, false, true}});
+    // An (extra) indirect friend of A should be B. D is not a friend of any other
+    clsc::applications::Matrix<bool> expected({{true, true, true, false},
+                                               {true, true, true, false},
+                                               {true, true, true, false},
+                                               {false, false, false, true}});
+
+    auto actual = clsc::applications::find_friends_n(friend_matrix, 1);
+    EXPECT_EQ(expected, actual);
 }

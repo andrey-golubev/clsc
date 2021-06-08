@@ -36,9 +36,16 @@
 namespace clsc {
 namespace applications {
 
+/**
+ * \brief Finds \a n -th level friends using \a friend_graph.
+ *
+ * \note \c{n = 0} returns the graph itself. \c{n = 1} returns indirect friends, who are "friends of
+ * friends" in the passed graph. Analogously, \c{n = 2} returns "friends of friends of friends" and
+ * so on.
+ */
 Matrix<bool> find_friends_n(const Matrix<bool>& friend_graph, size_t n) {
     return power_semigroup(
-        friend_graph, n - 1,
+        friend_graph, n + 1,
         multiply_accumulate_matrix<bool, std::logical_or<bool>, std::logical_and<bool>>{});
 }
 
