@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2018 Andrey Golubev
+# Copyright 2018-2021 Andrey Golubev
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -73,9 +73,11 @@ def main():
     """Main entrypoint"""
     args = parse_args()
     workdir = os.path.join(os.path.dirname(__file__), '..', 'build')
-    if args.rebuild:
-        if os.path.exists(workdir):
+    if os.path.exists(workdir):
+        if args.rebuild:
             shutil.rmtree(workdir)
+            os.makedirs(workdir)
+    else:
         os.makedirs(workdir)
     cmake_args = args.cmake_args
     for i, arg in enumerate(cmake_args):

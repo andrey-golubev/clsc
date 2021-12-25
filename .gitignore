@@ -1,5 +1,5 @@
-CMakeFiles
-CMakeCache*
+#CMakeFiles
+#CMakeCache*
 *.user
 Makefile
 *.*~
