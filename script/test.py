@@ -44,6 +44,8 @@ def parse_args():
                         help='Build in debug mode.')
     parser.add_argument('--cmake-args', default=[], nargs='*',
                         help='Pass raw arguments to cmake.')
+    parser.add_argument('--dev-build', action='store_true', default=False,
+                        help='Enable developer build configuration.')
     return parser.parse_args()
 
 
@@ -72,20 +74,38 @@ def test(debug_mode, cmake_args, work_dir='.'):
 def main():
     """Main entrypoint"""
     args = parse_args()
-    workdir = os.path.join(os.path.dirname(__file__), '..', 'build')
+    sourcedir = os.path.join(os.path.dirname(__file__), '..')
+    workdir = os.path.join(sourcedir, 'build')
+
+    # setup build/ dir
     if os.path.exists(workdir):
         if args.rebuild:
             shutil.rmtree(workdir)
             os.makedirs(workdir)
     else:
         os.makedirs(workdir)
+
     cmake_args = args.cmake_args
     for i, arg in enumerate(cmake_args):
         if not arg.startswith('-D'):
             cmake_args[i] = '-D' + arg
-    test(args.debug, cmake_args, workdir)
-    return 0
 
+    if args.dev_build:
+        cmake_args.append('-DCMAKE_EXPORT_COMPILE_COMMANDS=1')
+
+    test(args.debug, cmake_args, workdir)
+
+    if not args.dev_build:
+        return 0
+
+    try:
+        os.symlink(os.path.join(workdir, 'compile_commands.json'),
+                   os.path.join(sourcedir, 'compile_commands.json'))
+    except:
+        print('os.symlink failed')
+        return 1
+
+    return 0
 
 if __name__ == "__main__":
     sys.exit(main())
