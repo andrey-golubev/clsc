@@ -11,6 +11,8 @@ jobs:
       with:
         python-version: '3.x'
         architecture: 'x64'
+    - name: checkout googletest
+      run: git submodule update --init --recursive
     - name: install cmake
       run: sudo apt-get install -y cmake cmake-data
     - name: build and test
