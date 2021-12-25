@@ -1,17 +1,17 @@
 name: clsc master ci
 on:
-  pull-request:
+  pull_request:
     branches: [ master ]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    -uses: actions/checkout@v2
-    -uses: actions/setup-python@v2
-     with:
-       python-version: '3.x'
-       architecture: 'x64'
-    -name: install cmake
-     run: sudo apt-get install -y cmake cmake-data
-    -name: build and test
-     python ./script/test.py --rebuild
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+        architecture: 'x64'
+    - name: install cmake
+      run: sudo apt-get install -y cmake cmake-data
+    - name: build and test
+      run: python ./script/test.py --rebuild
