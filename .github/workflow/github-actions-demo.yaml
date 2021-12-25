@@ -1,0 +1,13 @@
+name: clsc master ci
+on:
+  pull-request:
+    branches: [ $default-branch ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    -uses: actions/checkout@v2
+    -name: install cmake
+     run: sudo apt-get install -y cmake cmake-data
+    -name: build and test
+     python3 ./script/test.py --rebuild
