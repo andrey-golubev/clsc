@@ -7,11 +7,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     -uses: actions/checkout@v2
-    -name: install python
-     uses: actions/setup-python@v2
+    -uses: actions/setup-python@v2
      with:
-       python-version: "3.8"
+       python-version: '3.x'
+       architecture: 'x64'
     -name: install cmake
      run: sudo apt-get install -y cmake cmake-data
     -name: build and test
-     python3 ./script/test.py --rebuild
+     python ./script/test.py --rebuild
