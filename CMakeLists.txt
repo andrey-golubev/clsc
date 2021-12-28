@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Andrey Golubev
+# Copyright 2018-2021 Andrey Golubev
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -29,7 +29,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(clsc)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")

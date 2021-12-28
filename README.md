@@ -8,7 +8,7 @@ CLSC (Cute Little Software Capital)
 ## About
 
 This is a toy-project dedicated to creating useful utilities that
-relatively modern `C++` (`C++11`/`C++14`) misses. There is also an on-going
+relatively modern `C++` (`C++17`) misses. There is also an on-going
 work on quite interesting features not currently available in `master`.
 
 ## Fast start
