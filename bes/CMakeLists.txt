@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Andrey Golubev
+# Copyright 2022 Andrey Golubev
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -26,35 +26,15 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cmake_minimum_required(VERSION 2.8)
-project(clsc)
+project(besc)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_EXTENSIONS OFF)
+# compiler library
+add_library(${PROJECT_NAME}_parts STATIC
+  besc_lexer.cpp besc_lexer.hpp
+)
+target_include_directories(${PROJECT_NAME}_parts PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+# set_target_properties(${PROJECT_NAME}_parts PROPERTIES LINKER_LANGUAGE CXX)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -g -O0")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS}")
-
-option(WITH_ASAN "Enable ASan build flags" OFF)
-
-if (${WITH_ASAN})
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=leak -fsanitize=undefined")
-  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libsan")
-  elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libasan")
-  endif()
-endif (${WITH_ASAN})
-
-# gtest
-set(BUILD_GMOCK OFF CACHE BOOL "Exclude gmock from build")
-set(INSTALL_GTEST OFF CACHE BOOL "Do not install gtest")
-add_subdirectory(external)
-
-# clsc
-add_subdirectory(utilities)
-add_subdirectory(algorithm)
-add_subdirectory(bes)
-add_subdirectory(tests)
+# compiler
+add_executable(${PROJECT_NAME} main.cpp)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_parts)
