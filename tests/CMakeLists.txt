@@ -39,6 +39,7 @@ add_executable(${PROJECT_NAME}
     count_until_tests.cpp
     algorithm_tests.cpp
     fibonacci_tests.cpp
+    callable_traits_tests.cpp
     besc_tests.cpp
 )
 
