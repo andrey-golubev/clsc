@@ -1,4 +1,4 @@
-// Copyright 2021 Andrey Golubev
+// Copyright 2022 Andrey Golubev
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -30,6 +30,7 @@
 
 #include "group_theory_bits.hpp"
 
+#include <algorithm>
 #include <cassert>
 
 /**
@@ -92,5 +93,83 @@ Regular power_group(Regular a, Integer n, GroupOperation op) {
     }
     return power_monoid(a, n, op);
 }
+
+namespace experimental {
+template<typename InputIt, typename OutputIt>
+void median(InputIt first1, InputIt last1, InputIt first2, InputIt last2, OutputIt d_first) {
+    // requires [first1, last1) and [first2, last2) are sorted ranges
+    auto d1 = std::distance(first1, last1);
+    auto d2 = std::distance(first2, last2);
+    using distance_type = decltype(d1);
+    if (d1 == distance_type(0)) {
+        if (d2 == distance_type(0))
+            return;
+
+        std::advance(first2, (d2 - 1) / 2);
+        *d_first = *first2;
+        if (d2 % 2 == distance_type(0)) {
+            ++d_first;
+            ++first2;
+            *d_first = *first2;
+        }
+        return;
+    }
+    if (d2 == distance_type(0)) {
+        if (d1 == distance_type(0))
+            return;
+
+        std::advance(first1, (d1 - 1) / 2);
+        *d_first = *first1;
+        if (d1 % 2 == distance_type(0)) {
+            ++d_first;
+            ++first1;
+            *d_first = *first1;
+        }
+        return;
+    }
+    if (d1 < 3 && d2 < 3) {
+        InputIt subrange[4] = {};
+        {
+            auto d_subrange = &subrange[0];
+            for (auto f = first1; f != last1; ++f, ++d_subrange) {
+                *d_subrange = f;
+            }
+            for (auto f = first2; f != last2; ++f, ++d_subrange) {
+                *d_subrange = f;
+            }
+        }
+        std::sort(std::begin(subrange), std::end(subrange), [](auto x, auto y) { return *x < *y; });
+
+        auto midpoint = &subrange[0];
+        std::advance(midpoint, (d1 + d2 - 1) / 2);
+        *d_first = **midpoint;
+        if ((d1 + d2) % 2 == distance_type(0)) {
+            ++d_first;
+            ++midpoint;
+            *d_first = **midpoint;
+        }
+        return;
+    }
+
+    if (!(*first1 < *first2)) {
+        using std::swap;
+        swap(first1, first2);
+        swap(last1, last2);
+        swap(d1, d2);
+    }
+
+    auto midpoint1 = first1;
+    std::advance(midpoint1, (d1 - 1) / 2);
+    auto midpoint2 = first2;
+    std::advance(midpoint2, (d2 - 1) / 2);
+
+    if (*midpoint1 < *midpoint2) {
+        median(midpoint1, last1, first2, midpoint2, d_first);
+    } else {
+        median(first1, midpoint1, midpoint2, last2, d_first);
+    }
+}
+
+}  // namespace experimental
 
 }  // namespace clsc

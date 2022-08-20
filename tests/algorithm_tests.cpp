@@ -35,7 +35,9 @@
 #include <cmath>
 #include <functional>
 #include <limits>
+#include <list>
 #include <random>
+#include <vector>
 
 namespace {
 template<typename T> bool are_equal(T a, T b, int units_in_last_place = 2) {
@@ -139,3 +141,57 @@ TEST(power_tests, raise_doubles_to_power) {
         std::multiplies<double>{}, [](double v, double m) { return std::pow(v, m); }, 5, 31.0, true,
         true);
 }
+
+TEST(median_tests, edge_cases) {
+    std::vector<int> x{0, 1, 2};
+
+    {
+        std::vector<int> medians(1, -1);
+        clsc::experimental::median(x.begin(), x.end(), x.end(), x.end(), medians.begin());
+        EXPECT_EQ(1, medians[0]);
+    }
+
+    {
+        std::vector<int> medians(1, -1);
+        clsc::experimental::median(x.end(), x.end(), x.begin(), x.end(), medians.begin());
+        EXPECT_EQ(1, medians[0]);
+    }
+
+    {
+        std::vector<int> medians(1, -1);
+        clsc::experimental::median(x.end(), x.end(), x.end(), x.end(), medians.begin());
+        EXPECT_EQ(-1, medians[0]);
+    }
+}
+
+TEST(median_tests, equal_ranges) {
+    {
+        std::list<int> x{0, 1, 2};
+        std::list<int> y{1, 7, 8};
+        std::vector<int> medians = {-1, -1};
+        clsc::experimental::median(x.begin(), x.end(), y.begin(), y.end(), medians.begin());
+        EXPECT_EQ(1, medians[0]);
+        EXPECT_EQ(2, medians[1]);
+
+        medians = {-1, -1};
+        clsc::experimental::median(y.begin(), y.end(), x.begin(), x.end(), medians.begin());
+        EXPECT_EQ(1, medians[0]);
+        EXPECT_EQ(2, medians[1]);
+    }
+
+    {
+        std::vector<int> x{0, 1, 2, 3};
+        std::vector<int> y{1, 3, 7, 8};
+        std::vector<int> medians = {-1, -1};
+        clsc::experimental::median(x.begin(), x.end(), y.begin(), y.end(), medians.begin());
+        EXPECT_EQ(2, medians[0]);
+        EXPECT_EQ(3, medians[1]);
+
+        medians = {-1, -1};
+        clsc::experimental::median(y.begin(), y.end(), x.begin(), x.end(), medians.begin());
+        EXPECT_EQ(2, medians[0]);
+        EXPECT_EQ(3, medians[1]);
+    }
+}
+
+TEST(median_tests, unequal_ranges) {}
