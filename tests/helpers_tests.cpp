@@ -26,8 +26,9 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include <gtest/gtest.h>
 #include <helpers.hpp>
+
+#include <gtest/gtest.h>
 
 TEST(helpers_tests, split_string) {
     std::string str("hello world");
@@ -55,4 +56,40 @@ TEST(helpers_tests, split_u32string) {
     const auto array = clsc::helpers::split(str, U' ');
     EXPECT_EQ(U"hello", array[0]);
     EXPECT_EQ(U"world", array[1]);
+}
+
+TEST(helpers_tests, trim_string_empty) {
+    std::string str;
+    clsc::helpers::trim(clsc::helpers::trim_both_sides_tag{}, str);
+    EXPECT_TRUE(str.empty());
+}
+
+TEST(helpers_tests, trim_string_nothing) {
+    std::wstring str(L"nothing to trim");
+    clsc::helpers::trim(clsc::helpers::trim_both_sides_tag{}, str);
+    EXPECT_EQ(L"nothing to trim", str);
+}
+
+TEST(helpers_tests, trim_string_left) {
+    std::string str(" h e l l o");
+    clsc::helpers::trim(clsc::helpers::trim_both_sides_tag{}, str);
+    EXPECT_EQ("h e l l o", str);
+}
+
+TEST(helpers_tests, trim_string_right) {
+    std::string str("h e l l o ");
+    clsc::helpers::trim(clsc::helpers::trim_both_sides_tag{}, str);
+    EXPECT_EQ("h e l l o", str);
+}
+
+TEST(helpers_tests, trim_string_both_sides) {
+    std::u16string str(u" h e l l o ");
+    clsc::helpers::trim(clsc::helpers::trim_both_sides_tag{}, str);
+    EXPECT_EQ(u"h e l l o", str);
+}
+
+TEST(helpers_tests, trim_string_more_than_one) {
+    std::u32string str(U"  hello, world!    ");
+    clsc::helpers::trim(clsc::helpers::trim_both_sides_tag{}, str);
+    EXPECT_EQ(U"hello, world!", str);
 }

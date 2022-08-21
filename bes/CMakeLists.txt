@@ -31,8 +31,11 @@ project(besc)
 # compiler library
 add_library(${PROJECT_NAME}_parts STATIC
   besc_lexer.cpp besc_lexer.hpp
+  tokens.hpp
+  source_location.hpp
 )
 target_include_directories(${PROJECT_NAME}_parts PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(${PROJECT_NAME}_parts PRIVATE clsc_utils)
 # set_target_properties(${PROJECT_NAME}_parts PROPERTIES LINKER_LANGUAGE CXX)
 
 # compiler
