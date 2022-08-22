@@ -34,6 +34,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstring>
 #include <stdexcept>
 #include <string_view>
 #include <unordered_map>
@@ -88,6 +89,34 @@ class lexer_state {
     std::string m_buffer{};
     source_location m_loc{};
 
+    bool holds_valid_identifier_token() const {
+        if (m_buffer.empty()) {
+            return false;
+        }
+
+        const char extra_unacceptable_first_characters[] = {':'};
+        if (std::isdigit(m_buffer[0]) ||
+            std::any_of(std::begin(extra_unacceptable_first_characters),
+                        std::end(extra_unacceptable_first_characters),
+                        [&](char x) { return m_buffer[0] == x; })) {
+            return false;
+        }
+
+        const auto is_acceptable_character = [](char x) {
+            if (std::isalnum(x)) {
+                return true;
+            }
+            const char acceptable_non_alphanumeric_characters[] = {'_'};
+            for (char y : acceptable_non_alphanumeric_characters) {
+                if (x == y) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        return std::all_of(m_buffer.begin(), m_buffer.end(), is_acceptable_character);
+    }
+
 public:
     lexer_state() { m_buffer.reserve(50); }
 
@@ -99,9 +128,11 @@ public:
         const auto& registry = token_registry();
         auto it = registry.find(std::string_view(m_buffer));
         if (it == registry.end()) {
-            // TODO: do basic identifier checks? (e.g. "starts with letter or
-            // underscore", etc.)
-            return {token{token::_BESID}, m_loc};
+            if (!holds_valid_identifier_token()) {
+                throw std::runtime_error("Unknown token at " + std::string(m_loc));
+            }
+            // special case: consider this an identifier
+            return {token{token::IDENTIFIER}, m_loc};
         }
         return {it->second, m_loc};
     }
@@ -124,6 +155,7 @@ void read_token(std::iostream& out, lexer_state& state, source_location new_loc)
 
 }  // namespace
 
+// TODO: fix "_x==_01y" considered unknown instead of "IDENTIFIER EQ IDENTIFIER"
 void lexer::tokenize() {
     lexer_state state{};
 

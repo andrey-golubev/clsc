@@ -30,10 +30,12 @@
 
 #include "source_location.hpp"
 
+#include <functional>
 #include <stdexcept>
 #include <string>
 
 #include <cctype>
+#include <type_traits>
 
 namespace clsc {
 namespace bes {
@@ -61,7 +63,7 @@ struct token {
 
         SEMICOLON,
 
-        _BESID,  // not a keyword itself but special, needs care not to collide with user code
+        IDENTIFIER,  // not a keyword itself but special, needs care not to collide with user code
     };
 
     token::value id = value::UNKNOWN;
@@ -88,7 +90,7 @@ struct token {
             CASE(VAR);
             CASE(EVAL);
             CASE(SEMICOLON);
-            CASE(_BESID);
+            CASE(IDENTIFIER);
         default:
             throw std::runtime_error("Unknown token");
         }
@@ -96,6 +98,9 @@ struct token {
 
 #undef CASE
     }
+
+    friend bool operator==(const token& x, const token& y) { return x.id == y.id; }
+    friend bool operator!=(const token& x, const token& y) { return !(x.id == y.id); }
 };
 
 struct annotated_token {
@@ -105,5 +110,33 @@ struct annotated_token {
     explicit operator std::string() const { return std::string(tok) + ' ' + std::string(loc); }
 };
 
+#define CLSC_BES_NEW_TOKEN_DECLARE(NAME) extern const ::clsc::bes::token TOKEN_##NAME;
+
+#define CLSC_BES_FOR_EACH_GLOBAL_TOKEN(CALL)                                                       \
+    CALL(OR)                                                                                       \
+    CALL(AND)                                                                                      \
+    CALL(NOT)                                                                                      \
+    CALL(XOR)                                                                                      \
+    CALL(ARROW_RIGHT)                                                                              \
+    CALL(ARROW_LEFT)                                                                               \
+    CALL(EQ)                                                                                       \
+    CALL(NEQ)                                                                                      \
+    CALL(ASSIGN)                                                                                   \
+    CALL(ALIAS)                                                                                    \
+    CALL(VAR)                                                                                      \
+    CALL(EVAL)                                                                                     \
+    CALL(SEMICOLON)
+
+// forward declare all global tokens
+CLSC_BES_FOR_EACH_GLOBAL_TOKEN(CLSC_BES_NEW_TOKEN_DECLARE)
+
+#undef CLSC_BES_NEW_TOKEN_DECLARE
+
 }  // namespace bes
 }  // namespace clsc
+
+template<> struct std::hash<clsc::bes::token> {
+    std::size_t operator()(const clsc::bes::token& t) const noexcept {
+        return std::hash<clsc::bes::token::value>{}(t.id);
+    }
+};
