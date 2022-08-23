@@ -34,6 +34,7 @@
 namespace clsc {
 namespace bes {
 
+class lexer_state;
 struct lexer {
     lexer(std::istream& in, std::iostream& out) : m_in(in), m_out(out) {
         assert(in.good());
@@ -45,6 +46,8 @@ struct lexer {
 private:
     std::istream& m_in;
     std::iostream& m_out;
+
+    void process_literal_string(char current, lexer_state& state, int& line, int& column);
 };
 
 }  // namespace bes

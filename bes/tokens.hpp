@@ -64,6 +64,10 @@ struct token {
         SEMICOLON,
 
         IDENTIFIER,  // not a keyword itself but special, needs care not to collide with user code
+
+        LITERAL_TRUE,
+        LITERAL_FALSE,
+        LITERAL_STRING,
     };
 
     token::value id = value::UNKNOWN;
@@ -91,6 +95,9 @@ struct token {
             CASE(EVAL);
             CASE(SEMICOLON);
             CASE(IDENTIFIER);
+            CASE(LITERAL_TRUE);
+            CASE(LITERAL_FALSE);
+            CASE(LITERAL_STRING);
         default:
             throw std::runtime_error("Unknown token");
         }
@@ -125,7 +132,9 @@ struct annotated_token {
     CALL(ALIAS)                                                                                    \
     CALL(VAR)                                                                                      \
     CALL(EVAL)                                                                                     \
-    CALL(SEMICOLON)
+    CALL(SEMICOLON)                                                                                \
+    CALL(LITERAL_TRUE)                                                                             \
+    CALL(LITERAL_FALSE)
 
 // forward declare all global tokens
 CLSC_BES_FOR_EACH_GLOBAL_TOKEN(CLSC_BES_NEW_TOKEN_DECLARE)

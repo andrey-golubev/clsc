@@ -73,17 +73,10 @@ CLSC_BES_NEW_TOKEN(EVAL, "eval");
 
 CLSC_BES_NEW_TOKEN(SEMICOLON, ";");
 
-inline int spaces_for_tab(char tab) {
-    switch (tab) {
-    case '\t':
-        return 4;
-    case ' ':
-        return 1;
-    default:
-        assert(false && "unreachable");
-    }
-    return 0;
-}
+CLSC_BES_NEW_TOKEN(LITERAL_TRUE, "true");
+CLSC_BES_NEW_TOKEN(LITERAL_FALSE, "false");
+
+}  // namespace
 
 class lexer_state {
     std::string m_buffer{};
@@ -117,6 +110,18 @@ class lexer_state {
         return std::all_of(m_buffer.begin(), m_buffer.end(), is_acceptable_character);
     }
 
+    bool holds_valid_literal_string_token() const {
+        if (m_buffer.size() < 2) {
+            return false;
+        }
+        // cannot have " in the middle (escaping is not supported)
+        if (std::any_of(m_buffer.begin() + 1, m_buffer.end() - 1,
+                        [](char c) { return c == '"'; })) {
+            return false;
+        }
+        return m_buffer.front() == '"' && m_buffer.back() == '"';
+    }
+
 public:
     lexer_state() { m_buffer.reserve(50); }
 
@@ -128,6 +133,10 @@ public:
         const auto& registry = token_registry();
         auto it = registry.find(std::string_view(m_buffer));
         if (it == registry.end()) {
+            // special case: string literal
+            if (holds_valid_literal_string_token()) {
+                return {token{token::LITERAL_STRING}, m_loc};
+            }
             if (!holds_valid_identifier_token()) {
                 throw std::runtime_error("Unknown token at " + std::string(m_loc));
             }
@@ -143,7 +152,21 @@ public:
     void trim() { clsc::helpers::trim(clsc::helpers::trim_both_sides_tag{}, m_buffer); }
 
     const std::string& buffer() const { return m_buffer; }
+    source_location loc() const { return m_loc; }
 };
+
+namespace {
+inline int spaces_for_tab(char tab) {
+    switch (tab) {
+    case '\t':
+        return 4;
+    case ' ':
+        return 1;
+    default:
+        assert(false && "unreachable");
+    }
+    return 0;
+}
 
 void read_token(std::iostream& out, lexer_state& state, source_location new_loc) {
     state.trim();
@@ -152,7 +175,6 @@ void read_token(std::iostream& out, lexer_state& state, source_location new_loc)
         out << '\n';
     }
 }
-
 }  // namespace
 
 // TODO: fix "_x==_01y" considered unknown instead of "IDENTIFIER EQ IDENTIFIER"
@@ -188,6 +210,12 @@ void lexer::tokenize() {
             read_token(m_out, state, {line, column});
             continue;
         }
+        case '"': {
+            state.add(current);
+            ++column;
+            process_literal_string(current, state, line, column);
+            continue;
+        }
         default: {
             state.add(current);
             break;
@@ -198,6 +226,33 @@ void lexer::tokenize() {
 
     // in case there's anything left in the buffer
     read_token(m_out, state, {line, column});
+}
+
+void lexer::process_literal_string(char start, lexer_state& state, int& line, int& column) {
+    for (char current = '\0'; m_in.get(current).good();) {
+        if (current == start) {
+            state.add(current);
+            ++column;
+            read_token(m_out, state, {line, column});
+            return;
+        }
+
+        // TODO: \\n and friends are fine
+        switch (current) {
+        case '\0':
+        case '\n':
+        case '\r':
+        case '\t': {
+            throw std::runtime_error("Invalid string literal at " + std::string(state.loc()));
+            break;
+        }
+        default: {
+            state.add(current);
+            break;
+        }
+        }
+        ++column;
+    }
 }
 
 }  // namespace bes

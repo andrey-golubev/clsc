@@ -38,54 +38,69 @@ TEST(besc_lexer_tests, creatable) {
     (void)lexer;
 }
 
+void tokenize(const std::pair<std::string, std::string>& in_out) {
+    std::stringstream ssin;
+    std::stringstream ssout;
+    ssin << in_out.first;
+
+    auto input = ssin.str();
+    clsc::bes::lexer lexer(ssin, ssout);
+    try {
+        lexer.tokenize();
+    } catch (const std::exception& e) {
+        FAIL() << "Tokenizing \"" << input << "\" failed with: " << e.what() << std::endl;
+    }
+
+    EXPECT_EQ(in_out.second, ssout.str());
+}
+
 TEST(besc_lexer_tests, standalone_tokens) {
     std::vector<std::pair<std::string, std::string>> in_out_data{
-        {"||", "OR 0:0\n"},        {"&&", "AND 0:0\n"},         {"~", "NOT 0:0\n"},
-        {"^", "XOR 0:0\n"},        {"->", "ARROW_RIGHT 0:0\n"}, {"<-", "ARROW_LEFT 0:0\n"},
-        {"==", "EQ 0:0\n"},        {"!=", "NEQ 0:0\n"},         {"=", "ASSIGN 0:0\n"},
-        {"symbol", "ALIAS 0:0\n"}, {"var", "VAR 0:0\n"},        {"eval", "EVAL 0:0\n"},
-        {";", "SEMICOLON 0:0\n"},  {"x", "IDENTIFIER 0:0\n"},   {"_90iyu", "IDENTIFIER 0:0\n"}};
+        {"||", "OR 0:0\n"},
+        {"&&", "AND 0:0\n"},
+        {"~", "NOT 0:0\n"},
+        {"^", "XOR 0:0\n"},
+        {"->", "ARROW_RIGHT 0:0\n"},
+        {"<-", "ARROW_LEFT 0:0\n"},
+        {"==", "EQ 0:0\n"},
+        {"!=", "NEQ 0:0\n"},
+        {"=", "ASSIGN 0:0\n"},
+        {"symbol", "ALIAS 0:0\n"},
+        {"var", "VAR 0:0\n"},
+        {"eval", "EVAL 0:0\n"},
+        {";", "SEMICOLON 0:0\n"},
+        {"x", "IDENTIFIER 0:0\n"},
+        {"_90iyu", "IDENTIFIER 0:0\n"},
+        {"true", "LITERAL_TRUE 0:0\n"},
+        {"false", "LITERAL_FALSE 0:0\n"},
+        {"\"\"", "LITERAL_STRING 0:0\n"},
+        {"\"hello! world\"", "LITERAL_STRING 0:0\n"},
+    };
     for (const auto& in_out : in_out_data) {
-        std::stringstream ssin;
-        std::stringstream ssout;
-        ssin << in_out.first;
-
-        clsc::bes::lexer lexer(ssin, ssout);
-        lexer.tokenize();
-
-        EXPECT_EQ(in_out.second, ssout.str());
+        tokenize(in_out);
     }
 }
 
 TEST(besc_lexer_tests, many_tokens) {
     std::vector<std::pair<std::string, std::string>> in_out_data{
         {"symbol x;", "ALIAS 0:0\nIDENTIFIER 0:7\nSEMICOLON 0:8\n"},
-        {"_x == _01y", "IDENTIFIER 0:0\nEQ 0:3\nIDENTIFIER 0:6\n"},
+        {
+            "_x == _01y",
+            "IDENTIFIER 0:0\nEQ 0:3\nIDENTIFIER 0:6\n",
+        },
+        {"symbol x = \"foo && bar\";",
+         "ALIAS 0:0\nIDENTIFIER 0:7\nASSIGN 0:9\nLITERAL_STRING 0:11\nSEMICOLON 0:23\n"},
     };
     for (const auto& in_out : in_out_data) {
-        std::stringstream ssin;
-        std::stringstream ssout;
-        ssin << in_out.first;
-
-        clsc::bes::lexer lexer(ssin, ssout);
-        lexer.tokenize();
-
-        EXPECT_EQ(in_out.second, ssout.str());
+        tokenize(in_out);
     }
 }
 
-TEST(besc_lexer_tests, DISABLED_many_tokens_together) {
+TEST(besc_lexer_tests, DISABLED_many_tokens_extra) {
     std::vector<std::pair<std::string, std::string>> in_out_data{
         {"_x==_01y", "IDENTIFIER 0:0\nEQ 0:2\nIDENTIFIER 0:4\n"},
     };
     for (const auto& in_out : in_out_data) {
-        std::stringstream ssin;
-        std::stringstream ssout;
-        ssin << in_out.first;
-
-        clsc::bes::lexer lexer(ssin, ssout);
-        lexer.tokenize();
-
-        EXPECT_EQ(in_out.second, ssout.str());
+        tokenize(in_out);
     }
 }
