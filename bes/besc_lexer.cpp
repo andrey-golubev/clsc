@@ -35,48 +35,61 @@
 #include <algorithm>
 #include <cctype>
 #include <cstring>
+#include <iterator>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace clsc {
 namespace bes {
 
 namespace {
-std::unordered_map<std::string_view, token>& token_registry() {
+std::unordered_map<std::string_view, token>& const_token_registry() {
     static std::unordered_map<std::string_view, token> registry;
     return registry;
 }
 
 inline token register_token(token::value value, const char* pattern) {
     token t{value};
-    token_registry().emplace(pattern, value);
+    const_token_registry().emplace(pattern, value);
     return t;
 }
+}  // namespace
 
-#define CLSC_BES_NEW_TOKEN(NAME, pattern)                                                          \
+// define tokens
+#define NEW_TOKEN(NAME, pattern)                                                                   \
     const ::clsc::bes::token TOKEN_##NAME = register_token(token::value::NAME, pattern);
 
-CLSC_BES_NEW_TOKEN(OR, "||");
-CLSC_BES_NEW_TOKEN(AND, "&&");
-CLSC_BES_NEW_TOKEN(NOT, "~");
-CLSC_BES_NEW_TOKEN(XOR, "^");
-CLSC_BES_NEW_TOKEN(ARROW_RIGHT, "->");
-CLSC_BES_NEW_TOKEN(ARROW_LEFT, "<-");
-CLSC_BES_NEW_TOKEN(EQ, "==");
-CLSC_BES_NEW_TOKEN(NEQ, "!=");
+#define NEW_NON_CONST_TOKEN(NAME) const ::clsc::bes::token TOKEN_##NAME = token{token::value::NAME};
 
-CLSC_BES_NEW_TOKEN(ASSIGN, "=");
-CLSC_BES_NEW_TOKEN(ALIAS, "symbol");  // TODO: rename to "alias"?
-CLSC_BES_NEW_TOKEN(VAR, "var");
-CLSC_BES_NEW_TOKEN(EVAL, "eval");
+// const tokens
+NEW_TOKEN(OR, "||");
+NEW_TOKEN(AND, "&&");
+NEW_TOKEN(NOT, "~");
+NEW_TOKEN(XOR, "^");
+NEW_TOKEN(ARROW_RIGHT, "->");
+NEW_TOKEN(ARROW_LEFT, "<-");
+NEW_TOKEN(EQ, "==");
+NEW_TOKEN(NEQ, "!=");
+NEW_TOKEN(ASSIGN, "=");
+NEW_TOKEN(ALIAS, "symbol");  // TODO: rename to "alias"?
+NEW_TOKEN(VAR, "var");
+NEW_TOKEN(EVAL, "eval");
+NEW_TOKEN(SEMICOLON, ";");
+NEW_TOKEN(LITERAL_TRUE, "true");
+NEW_TOKEN(LITERAL_FALSE, "false");
+NEW_TOKEN(PAREN_LEFT, "(");
+NEW_TOKEN(PAREN_RIGHT, ")");
 
-CLSC_BES_NEW_TOKEN(SEMICOLON, ";");
+// non-const tokens
+NEW_NON_CONST_TOKEN(UNKNOWN)
+NEW_NON_CONST_TOKEN(IDENTIFIER)
+NEW_NON_CONST_TOKEN(LITERAL_STRING)
 
-CLSC_BES_NEW_TOKEN(LITERAL_TRUE, "true");
-CLSC_BES_NEW_TOKEN(LITERAL_FALSE, "false");
-
-}  // namespace
+#undef NEW_TOKEN
+#undef NEW_NON_CONST_TOKEN
 
 class lexer_state {
     std::string m_buffer{};
@@ -130,29 +143,37 @@ public:
             m_buffer.clear();
             m_loc = new_loc;
         });
-        const auto& registry = token_registry();
+        const auto& registry = const_token_registry();
         auto it = registry.find(std::string_view(m_buffer));
         if (it == registry.end()) {
             // special case: string literal
             if (holds_valid_literal_string_token()) {
-                return {token{token::LITERAL_STRING}, m_loc};
+                return {TOKEN_LITERAL_STRING, m_loc};
             }
             if (!holds_valid_identifier_token()) {
                 throw std::runtime_error("Unknown token at " + std::string(m_loc));
             }
             // special case: consider this an identifier
-            return {token{token::IDENTIFIER}, m_loc};
+            return {TOKEN_IDENTIFIER, m_loc};
         }
         return {it->second, m_loc};
     }
 
     void add(char c) { m_buffer.push_back(c); }
+    void update(source_location loc) { m_loc = loc; }
     bool empty() const { return m_buffer.empty(); }
 
     void trim() { clsc::helpers::trim(clsc::helpers::trim_both_sides_tag{}, m_buffer); }
 
     const std::string& buffer() const { return m_buffer; }
     source_location loc() const { return m_loc; }
+
+    // flushes the buffer, asserting if buffer size != ExpectedSize
+    template<std::size_t ExpectedSize> void flush() {
+        assert((m_buffer.empty() || m_buffer.size() == ExpectedSize) &&
+               "must not have called flush()");
+        m_buffer.clear();
+    }
 };
 
 namespace {
@@ -175,9 +196,62 @@ void read_token(std::iostream& out, lexer_state& state, source_location new_loc)
         out << '\n';
     }
 }
+
+void try_read_token(std::iostream& out, char lookahead, lexer_state& state,
+                    source_location new_loc) {
+    static const auto delimiters = []() {
+        const auto delim = [](token t) {
+            const auto& registry = const_token_registry();
+            auto it = std::find_if(registry.begin(), registry.end(),
+                                   [&](const auto& p) { return p.second == t; });
+            assert(registry.end() != it);
+            return it->first.front();
+        };
+
+        return std::array{
+#define TO_DELIMITER(NAME) delim(TOKEN_##NAME),
+            CLSC_BES_FOR_EACH_DELIMITER_TOKEN(TO_DELIMITER)
+#undef TO_DELIMITER
+
+            // special characters
+            '\0',
+            '\n',
+            '\r',
+            '\t',
+            ' ',
+            '"',
+            '\'',
+        };
+    }();
+
+    const auto is_const_token = [](const std::string& pattern) {
+        const auto& registry = const_token_registry();
+        return registry.end() != registry.find(pattern);
+    };
+
+    const bool next_is_delimiter = std::any_of(std::begin(delimiters), std::end(delimiters),
+                                               [&](char x) { return lookahead == x; });
+    // collect as many characters as possible until a delimiter is coming next
+    if (!next_is_delimiter) {
+        // special case: even if there is no delimiter in the lookup, state
+        // might immediately contain a valid constant token
+        if (is_const_token(state.buffer())) {
+            read_token(out, state, new_loc);
+        }
+        return;
+    }
+
+    // special case: if buffer + lookahead give valid constant token then wait
+    // (e.g. resolves ASSIGN(=) vs EQ(==), OR(||), AND(&&), etc.)
+    if (is_const_token(state.buffer() + lookahead)) {
+        return;
+    }
+
+    read_token(out, state, new_loc);
+}
+
 }  // namespace
 
-// TODO: fix "_x==_01y" considered unknown instead of "IDENTIFIER EQ IDENTIFIER"
 void lexer::tokenize() {
     lexer_state state{};
 
@@ -185,43 +259,49 @@ void lexer::tokenize() {
     int column = 0;
 
     for (char current = '\0'; m_in.get(current).good();) {
+        state.add(current);
+        ++column;
+
         switch (current) {
-        case '\0':
+        case '\0': {
             assert(false && "should be rejected by the loop");
+            break;
+        }
         case '\n': {
             ++line;
-            column = 0;
             [[fallthrough]];
         }
         case '\r': {
             column = 0;
+            state.flush<1>();  // try_read_token() should've emptied it
+            state.update({line, column});
             continue;
         }
+        case '(':
+        case ')':
         case ';': {
+            assert(state.buffer().size() <= 1);  // try_read_token() should've emptied it
             read_token(m_out, state, {line, column});
-            state.add(current);
-            ++column;
-            read_token(m_out, state, {line, column});
-            break;
+            continue;
         }
         case '\t':
         case ' ': {
-            column += spaces_for_tab(current);
-            read_token(m_out, state, {line, column});
+            state.flush<1>();                       // try_read_token() should've emptied it
+            column += spaces_for_tab(current) - 1;  // subtract 1 due to +1 in the beginning
+            state.update({line, column});
             continue;
         }
         case '"': {
-            state.add(current);
-            ++column;
             process_literal_string(current, state, line, column);
             continue;
         }
         default: {
-            state.add(current);
+            if (char lookahead = m_in.peek(); lookahead != std::char_traits<char>::eof()) {
+                try_read_token(m_out, lookahead, state, {line, column});
+            }
             break;
         }
         }
-        ++column;
     }
 
     // in case there's anything left in the buffer
@@ -253,6 +333,8 @@ void lexer::process_literal_string(char start, lexer_state& state, int& line, in
         }
         ++column;
     }
+    // for-loop must find a symbol that terminates the string literal
+    throw std::runtime_error("Invalid string literal at " + std::string(state.loc()));
 }
 
 }  // namespace bes

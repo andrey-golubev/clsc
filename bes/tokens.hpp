@@ -39,36 +39,71 @@
 
 namespace clsc {
 namespace bes {
+// enumerates every token recognized by the lexer
+#define CLSC_BES_FOR_EACH_TOKEN(CALL)                                                              \
+    CALL(UNKNOWN)                                                                                  \
+    CALL(OR)                                                                                       \
+    CALL(AND)                                                                                      \
+    CALL(NOT)                                                                                      \
+    CALL(XOR)                                                                                      \
+    CALL(ARROW_RIGHT)                                                                              \
+    CALL(ARROW_LEFT)                                                                               \
+    CALL(EQ)                                                                                       \
+    CALL(NEQ)                                                                                      \
+    CALL(ASSIGN)                                                                                   \
+    CALL(ALIAS)                                                                                    \
+    CALL(VAR)                                                                                      \
+    CALL(EVAL)                                                                                     \
+    CALL(SEMICOLON)                                                                                \
+    CALL(IDENTIFIER)                                                                               \
+    CALL(LITERAL_TRUE)                                                                             \
+    CALL(LITERAL_FALSE)                                                                            \
+    CALL(LITERAL_STRING)                                                                           \
+    CALL(PAREN_LEFT)                                                                               \
+    CALL(PAREN_RIGHT)
+
+// enumerates lexer tokens with known value ("constant" value tokens e.g. keywords)
+#define CLSC_BES_FOR_EACH_CONST_TOKEN(CALL)                                                        \
+    CALL(OR)                                                                                       \
+    CALL(AND)                                                                                      \
+    CALL(NOT)                                                                                      \
+    CALL(XOR)                                                                                      \
+    CALL(ARROW_RIGHT)                                                                              \
+    CALL(ARROW_LEFT)                                                                               \
+    CALL(EQ)                                                                                       \
+    CALL(NEQ)                                                                                      \
+    CALL(ASSIGN)                                                                                   \
+    CALL(ALIAS)                                                                                    \
+    CALL(VAR)                                                                                      \
+    CALL(EVAL)                                                                                     \
+    CALL(SEMICOLON)                                                                                \
+    CALL(LITERAL_TRUE)                                                                             \
+    CALL(LITERAL_FALSE)                                                                            \
+    CALL(PAREN_LEFT)                                                                               \
+    CALL(PAREN_RIGHT)
+
+// enumerates lexer tokens that act as stream delimiters (excludes special characters)
+#define CLSC_BES_FOR_EACH_DELIMITER_TOKEN(CALL)                                                    \
+    CALL(OR)                                                                                       \
+    CALL(AND)                                                                                      \
+    CALL(NOT)                                                                                      \
+    CALL(XOR)                                                                                      \
+    CALL(ARROW_RIGHT)                                                                              \
+    CALL(ARROW_LEFT)                                                                               \
+    CALL(EQ)                                                                                       \
+    CALL(NEQ)                                                                                      \
+    CALL(SEMICOLON)                                                                                \
+    CALL(PAREN_LEFT)                                                                               \
+    CALL(PAREN_RIGHT)
+
 // each token needs:
 // - name
 // - enum value (and its string representation)
 // - keyword (optional)
 struct token {
-    enum value {
-        UNKNOWN,
-
-        OR,
-        AND,
-        NOT,
-        XOR,
-        ARROW_RIGHT,
-        ARROW_LEFT,
-        EQ,
-        NEQ,
-
-        ASSIGN,
-        ALIAS,
-        VAR,
-        EVAL,
-
-        SEMICOLON,
-
-        IDENTIFIER,  // not a keyword itself but special, needs care not to collide with user code
-
-        LITERAL_TRUE,
-        LITERAL_FALSE,
-        LITERAL_STRING,
-    };
+#define CLSC_BES_NEW_ENUM_VALUE(TOKEN) TOKEN,
+    enum value { CLSC_BES_FOR_EACH_TOKEN(CLSC_BES_NEW_ENUM_VALUE) };
+#undef CLSC_BES_NEW_ENUM_VALUE
 
     token::value id = value::UNKNOWN;
 
@@ -76,34 +111,18 @@ struct token {
     constexpr token(token::value value) : id(value) {}
 
     explicit operator std::string() const {
-#define CASE(x)                                                                                    \
-    case token::value::x:                                                                          \
-        return #x;
+#define CLSC_BES_CASE(TOKEN)                                                                       \
+    case token::value::TOKEN:                                                                      \
+        return #TOKEN;
 
         switch (this->id) {
-            CASE(OR);
-            CASE(AND);
-            CASE(NOT);
-            CASE(XOR);
-            CASE(ARROW_RIGHT);
-            CASE(ARROW_LEFT);
-            CASE(EQ);
-            CASE(NEQ);
-            CASE(ASSIGN);
-            CASE(ALIAS);
-            CASE(VAR);
-            CASE(EVAL);
-            CASE(SEMICOLON);
-            CASE(IDENTIFIER);
-            CASE(LITERAL_TRUE);
-            CASE(LITERAL_FALSE);
-            CASE(LITERAL_STRING);
+            CLSC_BES_FOR_EACH_TOKEN(CLSC_BES_CASE)
         default:
-            throw std::runtime_error("Unknown token");
+            throw std::runtime_error("Unreachable: every token must have std::string() conversion");
         }
         return {};
 
-#undef CASE
+#undef CLSC_BES_CASE
     }
 
     friend bool operator==(const token& x, const token& y) { return x.id == y.id; }
@@ -119,25 +138,8 @@ struct annotated_token {
 
 #define CLSC_BES_NEW_TOKEN_DECLARE(NAME) extern const ::clsc::bes::token TOKEN_##NAME;
 
-#define CLSC_BES_FOR_EACH_GLOBAL_TOKEN(CALL)                                                       \
-    CALL(OR)                                                                                       \
-    CALL(AND)                                                                                      \
-    CALL(NOT)                                                                                      \
-    CALL(XOR)                                                                                      \
-    CALL(ARROW_RIGHT)                                                                              \
-    CALL(ARROW_LEFT)                                                                               \
-    CALL(EQ)                                                                                       \
-    CALL(NEQ)                                                                                      \
-    CALL(ASSIGN)                                                                                   \
-    CALL(ALIAS)                                                                                    \
-    CALL(VAR)                                                                                      \
-    CALL(EVAL)                                                                                     \
-    CALL(SEMICOLON)                                                                                \
-    CALL(LITERAL_TRUE)                                                                             \
-    CALL(LITERAL_FALSE)
-
-// forward declare all global tokens
-CLSC_BES_FOR_EACH_GLOBAL_TOKEN(CLSC_BES_NEW_TOKEN_DECLARE)
+// forward declare all tokens
+CLSC_BES_FOR_EACH_TOKEN(CLSC_BES_NEW_TOKEN_DECLARE)
 
 #undef CLSC_BES_NEW_TOKEN_DECLARE
 

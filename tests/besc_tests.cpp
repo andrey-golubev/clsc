@@ -75,6 +75,12 @@ TEST(besc_lexer_tests, standalone_tokens) {
         {"false", "LITERAL_FALSE 0:0\n"},
         {"\"\"", "LITERAL_STRING 0:0\n"},
         {"\"hello! world\"", "LITERAL_STRING 0:0\n"},
+        {"(", "PAREN_LEFT 0:0\n"},
+        {")", "PAREN_RIGHT 0:0\n"},
+
+        // special cases
+        {" ", ""},
+        {"\t", ""},
     };
     for (const auto& in_out : in_out_data) {
         tokenize(in_out);
@@ -83,6 +89,7 @@ TEST(besc_lexer_tests, standalone_tokens) {
 
 TEST(besc_lexer_tests, many_tokens) {
     std::vector<std::pair<std::string, std::string>> in_out_data{
+        {"_x==_01y", "IDENTIFIER 0:0\nEQ 0:2\nIDENTIFIER 0:4\n"},
         {"symbol x;", "ALIAS 0:0\nIDENTIFIER 0:7\nSEMICOLON 0:8\n"},
         {
             "_x == _01y",
@@ -90,15 +97,13 @@ TEST(besc_lexer_tests, many_tokens) {
         },
         {"symbol x = \"foo && bar\";",
          "ALIAS 0:0\nIDENTIFIER 0:7\nASSIGN 0:9\nLITERAL_STRING 0:11\nSEMICOLON 0:23\n"},
-    };
-    for (const auto& in_out : in_out_data) {
-        tokenize(in_out);
-    }
-}
+        {"( x || y ) && z;", "PAREN_LEFT 0:0\nIDENTIFIER 0:2\nOR 0:4\nIDENTIFIER 0:7\nPAREN_RIGHT "
+                             "0:9\nAND 0:11\nIDENTIFIER 0:14\nSEMICOLON 0:15\n"},
 
-TEST(besc_lexer_tests, DISABLED_many_tokens_extra) {
-    std::vector<std::pair<std::string, std::string>> in_out_data{
-        {"_x==_01y", "IDENTIFIER 0:0\nEQ 0:2\nIDENTIFIER 0:4\n"},
+        // multi-line
+        {"symbol x=\"A || B\";\neval x;",
+         "ALIAS 0:0\nIDENTIFIER 0:7\nASSIGN 0:8\nLITERAL_STRING 0:9\nSEMICOLON 0:17\nEVAL "
+         "1:0\nIDENTIFIER 1:5\nSEMICOLON 1:6\n"},
     };
     for (const auto& in_out : in_out_data) {
         tokenize(in_out);
