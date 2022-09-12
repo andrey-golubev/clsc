@@ -74,21 +74,15 @@ statement
  | alias_statement
 
 substatement
- : or_statement
- | and_statement
- | xor_statement
- | arrow_right_statement
- | arrow_left_statement
- | eq_statement
- | neq_statement
+ : expression substatement_expression
  | not_statement
-
-% TODO: how to express '(' substatement ')' (or allow substatement -> expression production)?
+ | <empty>
 
 eval_statement : TOKEN_EVAL substatement
 
 var_statement : TOKEN_VAR TOKEN_IDENTIFIER
 
+% TODO: this might require lookahead(2) due to expression / assign_statement ambiguity
 assign_statement : TOKEN_IDENTIFIER TOKEN_ASSIGN substatement
 
 alias_statement : TOKEN_ALIAS TOKEN_IDENTIFIER TOKEN_ASSIGN TOKEN_LITERAL_STRING
@@ -97,35 +91,17 @@ expression
  : TOKEN_PAREN_LEFT substatement TOKEN_PAREN_RIGHT
  | TOKEN_LITERAL_FALSE
  | TOKEN_LITERAL_TRUE
- | TOKEN_ID
+ | TOKEN_IDENTIFIER
 
-or_statement : expression or_expression
-
-or_expression : TOKEN_OR expression
-
-and_statement : expression and_expression
-
-and_expression : TOKEN_AND expression
-
-xor_statement : expression xor_expression
-
-xor_expression : TOKEN_XOR expression
-
-arrow_right_statement : expression arrow_right_expression
-
-arrow_right_expression : TOKEN_ARROW_RIGHT expression
-
-arrow_left_statement : expression arrow_left_expression
-
-arrow_left_expression : TOKEN_ARROW_LEFT expression
-
-eq_statement : expression eq_expression
-
-eq_expression : TOKEN_EQ expression
-
-neq_statement : expression neq_expression
-
-neq_expression : TOKEN_NEQ expression
+substatement_expression
+ : TOKEN_OR expression
+ | TOKEN_AND expression
+ | TOKEN_XOR expression
+ | TOKEN_ARROW_RIGHT expression
+ | TOKEN_ARROW_LEFT expression
+ | TOKEN_EQ expression
+ | TOKEN_NEQ expression
+ | <empty>
 
 not_statement : TOKEN_NOT expression
 
