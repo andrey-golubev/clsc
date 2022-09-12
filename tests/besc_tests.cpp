@@ -27,30 +27,33 @@
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <besc_lexer.hpp>
+#include <token_stream.hpp>
 
 #include <gtest/gtest.h>
 
 #include <sstream>
 
 TEST(besc_lexer_tests, creatable) {
-    std::stringstream ss;
-    clsc::bes::lexer lexer{std::cin, ss};
+    clsc::bes::token_stream tokout;
+    clsc::bes::lexer lexer{std::cin, tokout};
     (void)lexer;
 }
 
 void tokenize(const std::pair<std::string, std::string>& in_out) {
     std::stringstream ssin;
-    std::stringstream ssout;
+    clsc::bes::token_stream tokout;
     ssin << in_out.first;
 
     auto input = ssin.str();
-    clsc::bes::lexer lexer(ssin, ssout);
+    clsc::bes::lexer lexer(ssin, tokout);
     try {
         lexer.tokenize();
     } catch (const std::exception& e) {
         FAIL() << "Tokenizing \"" << input << "\" failed with: " << e.what() << std::endl;
     }
 
+    std::stringstream ssout;
+    ssout << tokout;
     EXPECT_EQ(in_out.second, ssout.str());
 }
 

@@ -28,6 +28,8 @@
 
 #pragma once
 
+#include "token_stream.hpp"
+
 #include <cassert>
 #include <iostream>
 
@@ -36,18 +38,16 @@ namespace bes {
 
 class lexer_state;
 struct lexer {
-    lexer(std::istream& in, std::iostream& out) : m_in(in), m_out(out) {
-        assert(in.good());
-        assert(out.good());
-    }
+    lexer(std::istream& in, token_stream& out) : m_in(in), m_out(out) { assert(in.good()); }
 
     void tokenize();
 
 private:
     std::istream& m_in;
-    std::iostream& m_out;
+    token_stream& m_out;
 
-    void process_literal_string(char current, lexer_state& state, int& line, int& column);
+    void process_literal_string(char current, lexer_state& state, int& line, int& column,
+                                std::size_t& offset);
 };
 
 }  // namespace bes

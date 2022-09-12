@@ -28,7 +28,13 @@
 
 #include "besc_parser.hpp"
 #include "besc_ast.hpp"
+#include "source_location.hpp"
 #include "tokens.hpp"
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <vector>
 
 /*!
 % tokens
@@ -53,31 +59,223 @@ TOKEN_LITERAL_STRING
 TOKEN_PAREN_LEFT        (
 TOKEN_PAREN_RIGHT       )
 
-% grammar (note: character ';' denotes TOKEN_SEMICOLON)
-expr ::=
-| TOKEN_PAREN_LEFT expr TOKEN_PAREN_RIGHT ;
-| expr TOKEN_OR expr ;
-| expr TOKEN_AND expr ;
-| TOKEN_NOT expr ;
-| expr TOKEN_XOR expr ;
-| expr TOKEN_ARROW_RIGHT expr ;
-| expr TOKEN_ARROW_LEFT expr ;
-| expr TOKEN_EQ expr ;
-| expr TOKEN_NEQ expr ;
-| TOKEN_IDENTIFIER TOKEN_ASSIGN expr ;  % TODO: do we need this?
-| TOKEN_ALIAS TOKEN_IDENTIFIER TOKEN_ASSIGN TOKEN_LITERAL_STRING ;
-| TOKEN_VAR TOKEN_IDENTIFIER ;
-| TOKEN_EVAL expr ;
-| TOKEN_IDENTIFIER
-| TOKEN_LITERAL_TRUE
-| TOKEN_LITERAL_FALSE
+% grammar
+program : statement_list
+
+statement_list
+ : statement TOKEN_SEMICOLON statement_list
+ | <empty>
+
+statement
+ : substatement
+ | eval_statement
+ | var_statement
+ | assign_statement
+ | alias_statement
+
+substatement
+ : or_statement
+ | and_statement
+ | xor_statement
+ | arrow_right_statement
+ | arrow_left_statement
+ | eq_statement
+ | neq_statement
+ | not_statement
+
+% TODO: how to express '(' substatement ')' (or allow substatement -> expression production)?
+
+eval_statement : TOKEN_EVAL substatement
+
+var_statement : TOKEN_VAR TOKEN_IDENTIFIER
+
+assign_statement : TOKEN_IDENTIFIER TOKEN_ASSIGN substatement
+
+alias_statement : TOKEN_ALIAS TOKEN_IDENTIFIER TOKEN_ASSIGN TOKEN_LITERAL_STRING
+
+expression
+ : TOKEN_PAREN_LEFT substatement TOKEN_PAREN_RIGHT
+ | TOKEN_LITERAL_FALSE
+ | TOKEN_LITERAL_TRUE
+ | TOKEN_ID
+
+or_statement : expression or_expression
+
+or_expression : TOKEN_OR expression
+
+and_statement : expression and_expression
+
+and_expression : TOKEN_AND expression
+
+xor_statement : expression xor_expression
+
+xor_expression : TOKEN_XOR expression
+
+arrow_right_statement : expression arrow_right_expression
+
+arrow_right_expression : TOKEN_ARROW_RIGHT expression
+
+arrow_left_statement : expression arrow_left_expression
+
+arrow_left_expression : TOKEN_ARROW_LEFT expression
+
+eq_statement : expression eq_expression
+
+eq_expression : TOKEN_EQ expression
+
+neq_statement : expression neq_expression
+
+neq_expression : TOKEN_NEQ expression
+
+not_statement : TOKEN_NOT expression
+
  */
 
 namespace clsc {
 namespace bes {
 
+namespace {
+std::string unexpected_termination_error(const source_location& loc) {
+    return "Unexpected termination when parsing BES expression at " + std::string(loc);
+}
+
+std::string unexpected_token_error(const source_location& loc, const token& expected) {
+    return "Unexpected token in BES expression at " + std::string(loc) +
+           " expected: " + std::string(expected);
+}
+
+template<size_t N>
+std::array<annotated_token, N> read_sequence(token_stream in, source_location loc,
+                                             const token (&sequence)[N]) {
+    std::array<annotated_token, N> tokens{};
+    for (std::size_t i = 0; i < N; ++i) {
+        if (!in.good()) {
+            throw std::runtime_error(unexpected_termination_error(loc));
+        }
+        in.get(tokens[i]);
+        if (tokens[i].tok != sequence[i]) {
+            throw std::runtime_error(unexpected_token_error(tokens[i].loc, sequence[i]));
+        }
+    }
+    return tokens;
+}
+}  // namespace
+
+std::unique_ptr<ast::expression> parser::parse_expression() {
+    if (!m_in.good()) {
+        return {};
+    }
+
+    annotated_token t;
+    m_in.get(t);
+
+    switch (t.tok.id) {
+    // base cases
+    case token::SEMICOLON: {
+        return std::make_unique<ast::semicolon_expression>(t.loc);
+    }
+    case token::LITERAL_TRUE: {
+        return std::make_unique<ast::bool_literal_expression>(t.loc, true);
+    }
+    case token::LITERAL_FALSE: {
+        return std::make_unique<ast::bool_literal_expression>(t.loc, false);
+    }
+    case token::IDENTIFIER: {
+        annotated_token lookahead = m_in.peek();
+        if (lookahead.tok == TOKEN_ASSIGN) {
+            // TOKEN_IDENTIFIER TOKEN_ASSIGN expr ;  // TODO: do we need this?
+
+            // TODO: handle this branch correctly
+            (void)read_sequence(m_in, t.loc, {TOKEN_ASSIGN});
+            auto expr = parse_expression();
+            (void)read_sequence(m_in, t.loc, {TOKEN_SEMICOLON});
+            return {};
+        }
+        std::string_view name(m_raw_program.data() + t.loc.offset, t.loc.length);
+        return std::make_unique<ast::identifier_expression>(t.loc, name);
+    }
+
+    case token::OR: {
+        break;
+    }
+    case token::AND: {
+        break;
+    }
+    case token::NOT: {
+        // TOKEN_NOT expr ;
+        auto expr = parse_expression();
+        (void)read_sequence(m_in, t.loc, {TOKEN_SEMICOLON});
+        return std::make_unique<ast::not_expression>(t.loc, std::move(expr));
+    }
+    case token::XOR: {
+        break;
+    }
+    case token::ARROW_RIGHT: {
+        break;
+    }
+    case token::ARROW_LEFT: {
+        break;
+    }
+    case token::EQ: {
+        break;
+    }
+    case token::NEQ: {
+        break;
+    }
+    case token::ASSIGN: {
+        break;
+    }
+    case token::ALIAS: {
+        // TOKEN_ALIAS TOKEN_IDENTIFIER TOKEN_ASSIGN TOKEN_LITERAL_STRING ;
+        auto tokens = read_sequence(
+            m_in, t.loc, {TOKEN_IDENTIFIER, TOKEN_ASSIGN, TOKEN_LITERAL_STRING, TOKEN_SEMICOLON});
+
+        std::string_view name(m_raw_program.data() + tokens[0].loc.offset, tokens[0].loc.length);
+        auto id_expr = std::make_unique<ast::identifier_expression>(tokens[0].loc, name);
+        std::string_view string_literal(m_raw_program.data() + tokens[2].loc.offset,
+                                        tokens[2].loc.length);
+        return std::make_unique<ast::alias_expression>(t.loc, std::move(id_expr), string_literal);
+    }
+    case token::VAR: {
+        // TOKEN_VAR TOKEN_IDENTIFIER ;
+        auto tokens = read_sequence(m_in, t.loc, {TOKEN_IDENTIFIER, TOKEN_SEMICOLON});
+
+        std::string_view name(m_raw_program.data() + tokens[0].loc.offset, tokens[0].loc.length);
+        auto id_expr = std::make_unique<ast::identifier_expression>(tokens[0].loc, name);
+        return std::make_unique<ast::var_expression>(t.loc, std::move(id_expr));
+    }
+    case token::EVAL: {
+        // TOKEN_EVAL expr ;
+        auto expr = parse_expression();
+        (void)read_sequence(m_in, t.loc, {TOKEN_SEMICOLON});
+        return std::make_unique<ast::eval_expression>(t.loc, std::move(expr));
+    }
+    case token::LITERAL_STRING: {
+        break;
+    }
+    case token::PAREN_LEFT: {
+        break;
+    }
+    case token::PAREN_RIGHT: {
+        break;
+    }
+    default:
+        throw std::runtime_error("Unexpected BES expression at " + std::string(t.loc));
+    }
+
+    return {};
+}
+
 ast::program parser::parse() {
     ast::program p{};
+
+    while (m_in.good()) {
+        auto expr = parse_expression();
+        if (expr) {
+            p.add(std::move(expr));
+        }
+    }
+
     return p;
 }
 

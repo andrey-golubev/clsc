@@ -28,8 +28,10 @@
 
 #include "besc_lexer.hpp"
 #include "source_location.hpp"
+#include "token_stream.hpp"
 #include "tokens.hpp"
 
+#include <cstddef>
 #include <helpers.hpp>
 
 #include <algorithm>
@@ -142,21 +144,26 @@ public:
         auto guard = helpers::make_simple_scope_guard([this, &new_loc]() {
             m_buffer.clear();
             m_loc = new_loc;
+            m_loc.length = 0;
         });
+
+        source_location loc = m_loc;
+        loc.length = m_buffer.size();  // augment source location with length information
+
         const auto& registry = const_token_registry();
         auto it = registry.find(std::string_view(m_buffer));
         if (it == registry.end()) {
             // special case: string literal
             if (holds_valid_literal_string_token()) {
-                return {TOKEN_LITERAL_STRING, m_loc};
+                return {TOKEN_LITERAL_STRING, loc};
             }
             if (!holds_valid_identifier_token()) {
-                throw std::runtime_error("Unknown token at " + std::string(m_loc));
+                throw std::runtime_error("Unknown token at " + std::string(loc));
             }
             // special case: consider this an identifier
-            return {TOKEN_IDENTIFIER, m_loc};
+            return {TOKEN_IDENTIFIER, loc};
         }
-        return {it->second, m_loc};
+        return {it->second, loc};
     }
 
     void add(char c) { m_buffer.push_back(c); }
@@ -189,15 +196,14 @@ inline int spaces_for_tab(char tab) {
     return 0;
 }
 
-void read_token(std::iostream& out, lexer_state& state, source_location new_loc) {
+void read_token(token_stream& out, lexer_state& state, source_location new_loc) {
     state.trim();
     if (!state.empty()) {
-        out << std::string(state.read_token(new_loc));
-        out << '\n';
+        out << state.read_token(new_loc);
     }
 }
 
-void try_read_token(std::iostream& out, char lookahead, lexer_state& state,
+void try_read_token(token_stream& out, char lookahead, lexer_state& state,
                     source_location new_loc) {
     static const auto delimiters = []() {
         const auto delim = [](token t) {
@@ -257,8 +263,9 @@ void lexer::tokenize() {
 
     int line = 0;
     int column = 0;
+    std::size_t offset = 0;  // monotonically increasing character offset
 
-    for (char current = '\0'; m_in.get(current).good();) {
+    for (char current = '\0'; m_in.get(current).good(); ++offset) {
         state.add(current);
         ++column;
 
@@ -274,30 +281,30 @@ void lexer::tokenize() {
         case '\r': {
             column = 0;
             state.flush<1>();  // try_read_token() should've emptied it
-            state.update({line, column});
+            state.update({line, column, offset});
             continue;
         }
         case '(':
         case ')':
         case ';': {
             assert(state.buffer().size() <= 1);  // try_read_token() should've emptied it
-            read_token(m_out, state, {line, column});
+            read_token(m_out, state, {line, column, offset});
             continue;
         }
         case '\t':
         case ' ': {
             state.flush<1>();                       // try_read_token() should've emptied it
             column += spaces_for_tab(current) - 1;  // subtract 1 due to +1 in the beginning
-            state.update({line, column});
+            state.update({line, column, offset});
             continue;
         }
         case '"': {
-            process_literal_string(current, state, line, column);
+            process_literal_string(current, state, line, column, offset);
             continue;
         }
         default: {
             if (char lookahead = m_in.peek(); lookahead != std::char_traits<char>::eof()) {
-                try_read_token(m_out, lookahead, state, {line, column});
+                try_read_token(m_out, lookahead, state, {line, column, offset});
             }
             break;
         }
@@ -305,15 +312,17 @@ void lexer::tokenize() {
     }
 
     // in case there's anything left in the buffer
-    read_token(m_out, state, {line, column});
+    read_token(m_out, state, {line, column, offset});
 }
 
-void lexer::process_literal_string(char start, lexer_state& state, int& line, int& column) {
+void lexer::process_literal_string(char start, lexer_state& state, int& line, int& column,
+                                   std::size_t& offset) {
     for (char current = '\0'; m_in.get(current).good();) {
         if (current == start) {
             state.add(current);
             ++column;
-            read_token(m_out, state, {line, column});
+            ++offset;
+            read_token(m_out, state, {line, column, offset});
             return;
         }
 
@@ -332,6 +341,7 @@ void lexer::process_literal_string(char start, lexer_state& state, int& line, in
         }
         }
         ++column;
+        ++offset;
     }
     // for-loop must find a symbol that terminates the string literal
     throw std::runtime_error("Invalid string literal at " + std::string(state.loc()));

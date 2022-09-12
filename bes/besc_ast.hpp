@@ -60,12 +60,19 @@ private:
     std::vector<std::unique_ptr<expression>> m_exprs;
 };
 
+struct semicolon_expression : expression {
+    semicolon_expression(source_location loc) : expression(loc) {}
+    void apply(base_visitor*) override {}  // do nothing
+};
+
 struct identifier_expression : expression {
-    std::string name() const { return m_name; }
+    identifier_expression(source_location loc, std::string_view name)
+        : expression(loc), m_name(name) {}
+    std::string_view name() const { return m_name; }
     void apply(base_visitor*) override {}  // do nothing
 
 private:
-    std::string m_name;
+    std::string_view m_name;
 };
 
 struct logical_binary_expression : expression {
@@ -119,7 +126,8 @@ struct assign_expression : expression {
 };
 
 struct alias_expression : expression {
-    alias_expression(source_location loc, std::unique_ptr<identifier_expression> i, const char* lit)
+    alias_expression(source_location loc, std::unique_ptr<identifier_expression> i,
+                     std::string_view lit)
         : expression(loc), m_lit(lit) {
         add(std::move(i));
     }
@@ -128,10 +136,10 @@ struct alias_expression : expression {
     const identifier_expression* identifier() const {
         return static_cast<identifier_expression*>(m_subexprs[0].get());
     }
-    const char* literal() const { return m_lit; }
+    std::string_view literal() const { return m_lit; }
 
 private:
-    const char* m_lit = nullptr;
+    std::string_view m_lit{};
 };
 
 struct var_expression : expression {
