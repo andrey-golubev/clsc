@@ -28,34 +28,42 @@
 
 #pragma once
 
-#include <cstddef>
-#include <iterator>
-#include <string>
+#include "tokens.hpp"
+
+#include <ostream>
 
 namespace clsc {
 namespace bes {
-struct source_location {
-    int line = 0;
-    int column = 0;
-
-    // technical fields
-    std::size_t offset = 0;
-    std::size_t length = 0;
-
-    source_location(int l, int c, std::size_t o) : line(l), column(c), offset(o) {}
-    source_location(int l, int c, std::size_t o, std::size_t len)
-        : line(l), column(c), offset(o), length(len) {}
-
-    source_location() = default;
-    source_location(const source_location&) = default;
-    source_location(source_location&&) = default;
-    source_location& operator=(const source_location&) = default;
-    source_location& operator=(source_location&&) = default;
-    ~source_location() = default;
-
-    explicit operator std::string() const {
-        return std::to_string(line) + ':' + std::to_string(column);
+struct token_stream {
+    token_stream& get(annotated_token& t) {
+        t = m_buf.front();
+        m_buf.erase(m_buf.begin(), m_buf.begin() + 1);
+        return *this;
     }
+
+    annotated_token peek() const {
+        if (!good()) {
+            return annotated_token{};
+        }
+        return m_buf.front();
+    }
+
+    bool good() const { return !m_buf.empty(); }
+
+    friend token_stream& operator<<(token_stream& ts, annotated_token t) {
+        ts.m_buf.push_back(std::move(t));
+        return ts;
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const token_stream& ts) {
+        for (const auto& t : ts.m_buf) {
+            os << std::string(t) << '\n';
+        }
+        return os;
+    }
+
+private:
+    std::vector<annotated_token> m_buf{};
 };
 }  // namespace bes
 }  // namespace clsc

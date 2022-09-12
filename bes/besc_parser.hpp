@@ -29,20 +29,27 @@
 #pragma once
 
 #include "besc_ast.hpp"
+#include "token_stream.hpp"
 
 #include <cassert>
-#include <iostream>
 
 namespace clsc {
 namespace bes {
 
 struct parser {
-    parser(std::istream& in) : m_in(in) { assert(in.good()); }
+    parser(token_stream& in, const std::string& raw_program)
+        : m_in(in), m_raw_program(raw_program) {
+        assert(in.good());
+        assert(!raw_program.empty());
+    }
 
     ast::program parse();
 
 private:
-    std::istream& m_in;
+    token_stream& m_in;
+    const std::string& m_raw_program;
+
+    std::unique_ptr<ast::expression> parse_expression();
 };
 
 }  // namespace bes

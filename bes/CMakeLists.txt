@@ -32,6 +32,7 @@ project(besc)
 add_library(${PROJECT_NAME}_parts STATIC
   besc_lexer.cpp besc_lexer.hpp
   tokens.hpp
+  token_stream.hpp
   source_location.hpp
 
   besc_ast.hpp
