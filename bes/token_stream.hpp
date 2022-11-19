@@ -48,6 +48,14 @@ struct token_stream {
         return m_buf.front();
     }
 
+    // TODO: lookahead(2)
+    annotated_token peek2() const {
+        if (m_buf.size() < 2) {
+            return annotated_token{};
+        }
+        return m_buf[1];
+    }
+
     bool good() const { return !m_buf.empty(); }
 
     friend token_stream& operator<<(token_stream& ts, annotated_token t) {

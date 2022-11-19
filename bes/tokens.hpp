@@ -134,6 +134,11 @@ struct annotated_token {
     source_location loc;
 
     explicit operator std::string() const { return std::string(tok) + ' ' + std::string(loc); }
+
+    friend bool operator==(const annotated_token& x, const token& y) { return x.tok == y; }
+    friend bool operator==(const token& x, const annotated_token& y) { return y == x; }
+    friend bool operator!=(const annotated_token& x, const token& y) { return !(x == y); }
+    friend bool operator!=(const token& x, const annotated_token& y) { return y != x; }
 };
 
 #define CLSC_BES_NEW_TOKEN_DECLARE(NAME) extern const ::clsc::bes::token TOKEN_##NAME;

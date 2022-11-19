@@ -26,6 +26,8 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "besc_parser.hpp"
+#include "tokens.hpp"
 #include <besc_lexer.hpp>
 #include <token_stream.hpp>
 
@@ -110,5 +112,43 @@ TEST(besc_lexer_tests, many_tokens) {
     };
     for (const auto& in_out : in_out_data) {
         tokenize(in_out);
+    }
+}
+
+TEST(besc_parser_tests, creatable) {
+    clsc::bes::token_stream tokin;
+    tokin << clsc::bes::annotated_token{clsc::bes::TOKEN_LITERAL_TRUE, {}};
+    std::string raw_program = "true";
+    clsc::bes::parser p{tokin, raw_program};
+    (void)p;
+}
+
+TEST(besc_parser_tests, standalone_tokens) {
+    std::vector<clsc::bes::token_stream> streams = {
+        []() {
+            clsc::bes::token_stream t;
+            t << clsc::bes::annotated_token{clsc::bes::TOKEN_IDENTIFIER, {}};
+            return t;
+        }(),
+        []() {
+            clsc::bes::token_stream t;
+            t << clsc::bes::annotated_token{clsc::bes::TOKEN_LITERAL_TRUE, {}};
+            return t;
+        }(),
+        []() {
+            clsc::bes::token_stream t;
+            t << clsc::bes::annotated_token{clsc::bes::TOKEN_LITERAL_FALSE, {}};
+            return t;
+        }(),
+    };
+    std::vector<std::string> programs = {"x", "true", "false"};
+    assert(streams.size() == programs.size());
+
+    for (size_t i = 0; i < streams.size(); ++i) {
+        auto& tokin = streams[i];
+        const auto& raw_program = programs[i];
+
+        clsc::bes::parser parser{tokin, raw_program};
+        parser.parse();
     }
 }
