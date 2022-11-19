@@ -42,6 +42,9 @@ target_include_directories(${PROJECT_NAME}_parts PUBLIC ${CMAKE_CURRENT_SOURCE_D
 target_link_libraries(${PROJECT_NAME}_parts PRIVATE clsc_utils)
 # set_target_properties(${PROJECT_NAME}_parts PROPERTIES LINKER_LANGUAGE CXX)
 
+# TODO: remove once parser is more-or-less stable
+target_compile_options(${PROJECT_NAME}_parts PRIVATE "-Wno-unused-function")
+
 # compiler
 add_executable(${PROJECT_NAME} main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_parts)
