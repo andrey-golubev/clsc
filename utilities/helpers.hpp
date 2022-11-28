@@ -60,6 +60,43 @@ void trim(trim_both_sides_tag, std::basic_string<CharT>& src) {
     src.erase(src.begin(), front);
 }
 
+template<typename CharT, typename Iterator, typename UnaryOp,
+         typename Traits = std::char_traits<CharT>,
+         // Note: enable_if is necessary to disambiguate UnaryOp from CharT
+         typename = typename std::enable_if<std::is_invocable<
+             UnaryOp, typename std::iterator_traits<Iterator>::value_type>::value>::type>
+std::basic_string<CharT> join(Iterator first, Iterator last, UnaryOp op, CharT sep = CharT(',')) {
+    if (first == last) {
+        return {};
+    }
+
+    std::basic_string<CharT> accumulator = op(*first);
+    ++first;
+    while (first != last) {
+        accumulator += sep;
+        accumulator += op(*first);
+        ++first;
+    }
+    return accumulator;
+}
+
+template<typename CharT, typename Iterator, typename Traits = std::char_traits<CharT>>
+std::basic_string<CharT> join(Iterator first, Iterator last, CharT sep = CharT(',')) {
+    return join<CharT>(
+        first, last,
+        [](auto x) {
+            using iterator_value_type = std::decay_t<decltype(x)>;
+            if constexpr (std::is_same<iterator_value_type, std::decay_t<CharT>>::value) {
+                return std::basic_string<CharT>(1, x);
+            } else {
+                // explicit cast to std::basic_string<> type - assume user type
+                // to have the corresponding operator
+                return std::basic_string<CharT>(x);
+            }
+        },
+        sep);
+}
+
 template<typename Callable> class simple_scope_guard {
     Callable m_f;
 

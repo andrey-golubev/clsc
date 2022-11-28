@@ -93,3 +93,29 @@ TEST(helpers_tests, trim_string_more_than_one) {
     clsc::helpers::trim(clsc::helpers::trim_both_sides_tag{}, str);
     EXPECT_EQ(U"hello, world!", str);
 }
+
+TEST(helpers_tests, join_empty_range) {
+    std::vector<int> empty{};
+    auto actual = clsc::helpers::join<char>(empty.begin(), empty.end(),
+                                            [](int x) { return std::to_string(x); });
+    ASSERT_EQ(actual, std::string{});
+}
+
+TEST(helpers_tests, join_nonempty_range) {
+    std::vector<int> nonempty{1, 2, -11, 235};
+    auto actual = clsc::helpers::join<char>(nonempty.begin(), nonempty.end(),
+                                            [](int x) { return std::to_string(x); });
+    ASSERT_EQ(actual, "1,2,-11,235");
+}
+
+TEST(helpers_tests, join_single_element) {
+    std::vector<wchar_t> nonempty{L'a'};
+    auto actual = clsc::helpers::join<wchar_t>(nonempty.begin(), nonempty.end());
+    ASSERT_EQ(actual, L"a");
+}
+
+TEST(helpers_tests, join_custom_separator) {
+    std::vector<char32_t> nonempty{U'a', U'b', U'c'};
+    auto actual = clsc::helpers::join<char32_t>(nonempty.begin(), nonempty.end(), ' ');
+    ASSERT_EQ(actual, U"a b c");
+}
