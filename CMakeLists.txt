@@ -44,7 +44,10 @@ if (${WITH_ASAN})
   if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libsan")
   elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libasan")
+    # arch linux is fine without the flag. assume this is due very modern GCC:
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12.0)
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libasan")
+    endif()
   endif()
 endif (${WITH_ASAN})
 
