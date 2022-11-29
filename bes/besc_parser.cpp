@@ -28,12 +28,15 @@
 
 #include "besc_parser.hpp"
 #include "besc_ast.hpp"
+#include "helpers.hpp"
 #include "source_location.hpp"
 #include "token_stream.hpp"
 #include "tokens.hpp"
 
+#include <algorithm>
 #include <initializer_list>
 #include <memory>
+#include <numeric>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -43,7 +46,7 @@
 #include <iostream>
 
 /*!
-% tokens
+%% tokens
 TOKEN_UNKNOWN
 TOKEN_OR                ||
 TOKEN_AND               &&
@@ -65,13 +68,12 @@ TOKEN_LITERAL_STRING
 TOKEN_PAREN_LEFT        (
 TOKEN_PAREN_RIGHT       )
 
-% grammar
+%% grammar
 program : statement_list
 
-% TODO: statement list with TOKEN_SEMICOLON in the middle is wrong?!
 statement_list
- : statement TOKEN_SEMICOLON statement_list
- | <empty>
+ : statement
+ | TOKEN_SEMICOLON statement_list
 
 statement
  : substatement
@@ -89,7 +91,7 @@ eval_statement : TOKEN_EVAL substatement
 
 var_statement : TOKEN_VAR TOKEN_IDENTIFIER
 
-% TODO: this might require lookahead(2) due to expression / assign_statement ambiguity
+% TODO: requires lookahead(2) due to expression / assign_statement ambiguity
 assign_statement : TOKEN_IDENTIFIER TOKEN_ASSIGN substatement
 
 alias_statement : TOKEN_ALIAS TOKEN_IDENTIFIER TOKEN_ASSIGN TOKEN_LITERAL_STRING
@@ -137,6 +139,31 @@ struct parse_tree_nonterminal {
         not_statement,
     };
 
+    static std::string stringify(label l) {
+#define CASE(x)                                                                                    \
+    case label::x:                                                                                 \
+        return "<" #x ">"
+
+        switch (l) {
+            CASE(program);
+            CASE(statement_list);
+            CASE(statement);
+            CASE(substatement);
+            CASE(eval_statement);
+            CASE(var_statement);
+            CASE(assign_statement);
+            CASE(alias_statement);
+            CASE(substatement_expression);
+            CASE(expression);
+            CASE(single_token_expression);
+            CASE(parenthesized_expression);
+            CASE(not_statement);
+        }
+#undef CASE
+
+        return "<unknown>";
+    }
+
     virtual ~parse_tree_nonterminal() = default;
     virtual void apply(parse_tree_visitor* visitor) = 0;
     virtual label get_label() = 0;
@@ -162,6 +189,15 @@ struct parse_tree_element {
     template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
     operator bool() const { return std::holds_alternative<std::monostate>(m_content); }
+
+    operator std::string() const {
+        if (std::holds_alternative<std::monostate>(m_content)) {
+            return "<empty>";
+        } else if (std::holds_alternative<terminal>(m_content)) {
+            return std::string(std::get<terminal>(m_content));
+        }
+        return nonterminal::stringify(std::get<nonterminal_>(m_content)->get_label());
+    }
 
     template<typename... Callables> void accept(Callables... calls) {
         std::visit(overloaded{calls...}, m_content);
@@ -300,6 +336,14 @@ struct printer_visitor : parse_tree_visitor {
     printer_visitor() { std::cout << "Printing program ...\n"; }
     void visit(program*) override { std::cout << "\tprogram\n"; }
     void visit(statement_list*) override { std::cout << "\tstatement_list\n"; }
+    void visit(statement*) override { std::cout << "\tstatement\n"; }
+    void visit(substatement*) override { std::cout << "\tsubstatement\n"; }
+    void visit(eval_statement*) override { std::cout << "\teval_statement\n"; }
+    void visit(var_statement*) override { std::cout << "\tvar_substatement\n"; }
+    void visit(assign_statement*) override { std::cout << "\tassign_statement\n"; }
+    void visit(alias_statement*) override { std::cout << "\talias_statement\n"; }
+    void visit(substatement_expression*) override { std::cout << "\tsubstatement_expression\n"; }
+    void visit(expression*) override { std::cout << "\texpression\n"; }
     void visit(single_token_expression*) override { std::cout << "\tsingle_token_expression\n"; }
     void visit(parenthesized_expression*) override { std::cout << "\tparenthesized_expression\n"; }
     void visit(not_statement*) override { std::cout << "\tnot_statement\n"; }
@@ -311,31 +355,69 @@ template<typename T, typename U> T fast_cast(U* x) {
     return static_cast<T>(x);
 }
 
+[[noreturn]] inline void throw_parsing_error(std::string what) {
+    throw std::runtime_error("Parsing error: " + what);
+}
+
+inline std::string expected_token_message(clsc::bes::token t) {
+    return "Expected token <" + std::string(t) + ">";
+}
+
+std::string unexpected_token_error(const clsc::bes::source_location& loc,
+                                   const clsc::bes::token& expected) {
+    return "Unexpected token in BES expression at " + std::string(loc) + ". " +
+           expected_token_message(expected);
+}
+
+// TODO: once ready, add [[nodiscard]]
+template<size_t N>
+std::array<clsc::bes::annotated_token, N> read_sequence(clsc::bes::token_stream in,
+                                                        const clsc::bes::token (&sequence)[N]) {
+    std::array<clsc::bes::annotated_token, N> tokens{};
+    for (std::size_t i = 0; i < N; ++i) {
+        if (!in.good()) {
+            throw_parsing_error("input program ended unexpectedly. " +
+                                expected_token_message(sequence[i]));
+        }
+        in.get(tokens[i]);
+        if (tokens[i].tok != sequence[i]) {
+            throw_parsing_error(unexpected_token_error(tokens[i].loc, sequence[i]));
+        }
+    }
+    return tokens;
+}
+
+// returns whether token stream is empty or could be considered as such
+bool consider_empty(clsc::bes::token_stream& in) {
+    if (!in.good()) {
+        return true;
+    }
+    return in.peek() == clsc::bes::TOKEN_SEMICOLON;
+}
+
 template<typename Stack>
-using nonterminal_handler = bool (*)(Stack&, nonterminal*, clsc::bes::token_stream&);
+using nonterminal_handler = void (*)(Stack&, nonterminal*, clsc::bes::token_stream&);
 template<typename Stack>
 nonterminal_handler<Stack> find_nonterminal_handler(parse_tree_nonterminal::label l,
                                                     clsc::bes::token_stream& in) {
 #define NONTERMINAL_CASE(NAME)                                                                     \
     case parse_tree_nonterminal::label::NAME:                                                      \
         return [](Stack & stack [[maybe_unused]], nonterminal * This [[maybe_unused]],             \
-                  clsc::bes::token_stream & in [[maybe_unused]]) -> bool
+                  clsc::bes::token_stream & in [[maybe_unused]])
 
     switch (l) {
-        NONTERMINAL_CASE(program) {
-            stack.emplace_back(std::make_unique<statement_list>());
-            return true;
-        };
+        NONTERMINAL_CASE(program) { stack.emplace_back(std::make_unique<statement_list>()); };
         NONTERMINAL_CASE(statement_list) {
-            if (!in.good()) {  // <empty>
-                return true;
+            const auto next_token = in.peek();
+            if (next_token == clsc::bes::TOKEN_SEMICOLON) {
+                clsc::bes::annotated_token dummy;
+                in.get(dummy);
+                stack.emplace_back(std::make_unique<statement_list>());
+            } else {
+                stack.emplace_back(std::make_unique<statement>());
             }
-            stack.emplace_back(std::make_unique<statement>());
-            stack.emplace_back(clsc::bes::TOKEN_SEMICOLON);
-            stack.emplace_back(std::make_unique<statement_list>());
-            return true;
         };
-        NONTERMINAL_CASE(single_token_expression) {
+        NONTERMINAL_CASE(single_token_expression) {  // TODO: delete this!
             auto next_token = in.peek();
             const auto suitable = {clsc::bes::TOKEN_IDENTIFIER, clsc::bes::TOKEN_LITERAL_TRUE,
                                    clsc::bes::TOKEN_LITERAL_FALSE};
@@ -343,9 +425,11 @@ nonterminal_handler<Stack> find_nonterminal_handler(parse_tree_nonterminal::labe
                 std::find(std::begin(suitable), std::end(suitable), next_token)) {
                 in.get(fast_cast<single_token_expression*>(This)->token);
                 // nothing to add to the stack here
-                return true;
+                return;
             }
-            return false;
+            auto sequence =
+                clsc::helpers::join<char>(std::begin(suitable), std::end(suitable), ' ');
+            throw_parsing_error("unexpected token. Expected one of {" + sequence + "}");
         };
         NONTERMINAL_CASE(statement) {
             auto next_token = in.peek();
@@ -367,34 +451,25 @@ nonterminal_handler<Stack> find_nonterminal_handler(parse_tree_nonterminal::labe
             } else {  // fallback
                 stack.emplace_back(std::make_unique<substatement>());
             }
-            return true;
         };
         NONTERMINAL_CASE(assign_statement) {
-            stack.emplace_back(clsc::bes::TOKEN_IDENTIFIER);
-            stack.emplace_back(clsc::bes::TOKEN_ASSIGN);
+            read_sequence(in, {clsc::bes::TOKEN_IDENTIFIER, clsc::bes::TOKEN_ASSIGN});
             stack.emplace_back(std::make_unique<substatement>());
-            return true;
         };
         NONTERMINAL_CASE(alias_statement) {
-            stack.emplace_back(clsc::bes::TOKEN_ALIAS);
-            stack.emplace_back(clsc::bes::TOKEN_IDENTIFIER);
-            stack.emplace_back(clsc::bes::TOKEN_ASSIGN);
-            stack.emplace_back(clsc::bes::TOKEN_LITERAL_STRING);
-            return true;
+            read_sequence(in, {clsc::bes::TOKEN_ALIAS, clsc::bes::TOKEN_IDENTIFIER,
+                               clsc::bes::TOKEN_ASSIGN, clsc::bes::TOKEN_LITERAL_STRING});
         };
         NONTERMINAL_CASE(var_statement) {
-            stack.emplace_back(clsc::bes::TOKEN_VAR);
-            stack.emplace_back(clsc::bes::TOKEN_IDENTIFIER);
-            return true;
+            read_sequence(in, {clsc::bes::TOKEN_VAR, clsc::bes::TOKEN_IDENTIFIER});
         };
         NONTERMINAL_CASE(eval_statement) {
-            stack.emplace_back(clsc::bes::TOKEN_EVAL);
+            read_sequence(in, {clsc::bes::TOKEN_EVAL});
             stack.emplace_back(std::make_unique<substatement>());
-            return true;
         };
         NONTERMINAL_CASE(substatement) {
-            if (!in.good()) {  // <empty>
-                return true;
+            if (consider_empty(in)) {
+                return;
             }
 
             if (in.peek() == clsc::bes::TOKEN_NOT) {
@@ -403,8 +478,6 @@ nonterminal_handler<Stack> find_nonterminal_handler(parse_tree_nonterminal::labe
                 stack.emplace_back(std::make_unique<expression>());
                 stack.emplace_back(std::make_unique<substatement_expression>());
             }
-
-            return true;
         };
         NONTERMINAL_CASE(expression) {
             // expression
@@ -412,17 +485,19 @@ nonterminal_handler<Stack> find_nonterminal_handler(parse_tree_nonterminal::labe
             //  | TOKEN_LITERAL_FALSE
             //  | TOKEN_LITERAL_TRUE
             //  | TOKEN_IDENTIFIER
-            auto next_token = in.peek();
-            if (next_token == clsc::bes::TOKEN_IDENTIFIER) {
-                stack.emplace_back(clsc::bes::TOKEN_IDENTIFIER);
-            } else if (next_token == clsc::bes::TOKEN_LITERAL_TRUE) {
-                stack.emplace_back(clsc::bes::TOKEN_LITERAL_TRUE);
-            } else if (next_token == clsc::bes::TOKEN_LITERAL_FALSE) {
-                stack.emplace_back(clsc::bes::TOKEN_LITERAL_FALSE);
-            } else {  // fallback
+            const auto next_token = in.peek();
+            const auto suitable = {clsc::bes::TOKEN_IDENTIFIER, clsc::bes::TOKEN_LITERAL_TRUE,
+                                   clsc::bes::TOKEN_LITERAL_FALSE};
+            if (std::end(suitable) !=
+                std::find(std::begin(suitable), std::end(suitable), next_token)) {
+                // TODO: do something with this token?
+                clsc::bes::annotated_token dummy;
+                in.get(dummy);
+                // nothing to add to the stack here
+            } else {
+                // fallback
                 stack.emplace_back(std::make_unique<parenthesized_expression>());
             }
-            return true;
         };
         NONTERMINAL_CASE(substatement_expression) {
             // substatement_expression
@@ -434,10 +509,11 @@ nonterminal_handler<Stack> find_nonterminal_handler(parse_tree_nonterminal::labe
             //  | TOKEN_EQ expression
             //  | TOKEN_NEQ expression
             //  | <empty>
-            if (!in.good()) {  // <empty>
-                return true;
+            if (consider_empty(in)) {
+                return;
             }
-            auto next_token = in.peek();
+
+            const auto next_token = in.peek();
             const auto parse_candidates = {
                 clsc::bes::TOKEN_NEQ,         clsc::bes::TOKEN_EQ,  clsc::bes::TOKEN_ARROW_LEFT,
                 clsc::bes::TOKEN_ARROW_RIGHT, clsc::bes::TOKEN_XOR, clsc::bes::TOKEN_AND,
@@ -447,25 +523,25 @@ nonterminal_handler<Stack> find_nonterminal_handler(parse_tree_nonterminal::labe
                 std::any_of(std::begin(parse_candidates), std::end(parse_candidates),
                             [&](auto x) { return next_token == x; });
             if (!valid_parse) {
-                // TODO: improve error to "expected one of: [ ... ]"
-                throw std::runtime_error("Parsing error: unexpected token " +
-                                         std::string(next_token));
+                const auto sequence = clsc::helpers::join<char>(std::begin(parse_candidates),
+                                                                std::end(parse_candidates), ' ');
+                throw_parsing_error("unexpected token " + std::string(next_token) +
+                                    ". Expected one of { " + sequence + " }");
             }
+            // TODO: do something with this token
+            clsc::bes::annotated_token dummy;
+            in.get(dummy);
 
-            stack.emplace_back(next_token.tok);
             stack.emplace_back(std::make_unique<expression>());
-            return true;
         };
         NONTERMINAL_CASE(parenthesized_expression) {
             stack.emplace_back(clsc::bes::TOKEN_PAREN_LEFT);
             stack.emplace_back(std::make_unique<substatement>());
             stack.emplace_back(clsc::bes::TOKEN_PAREN_RIGHT);
-            return true;
         };
         NONTERMINAL_CASE(not_statement) {
-            stack.emplace_back(clsc::bes::TOKEN_NOT);
+            read_sequence(in, {clsc::bes::TOKEN_NOT});
             stack.emplace_back(std::make_unique<expression>());
-            return true;
         };
     }
 #undef NONTERMINAL_CASE
@@ -485,8 +561,9 @@ public:
     ReverseOrderPush(Stack& s) : m_remote(s) {}
     ~ReverseOrderPush() {
         // reverse received content before storing it into the (real) stack
-        std::reverse(std::begin(m_local), std::end(m_local));
-        for (auto& entry : m_local) {
+        std::reverse(std::begin(m_local), std::begin(m_local) + m_count);
+        for (size_t i = 0; i < m_count; ++i) {
+            auto& entry = m_local[i];
             m_remote.emplace_back(std::move(entry));
         }
     }
@@ -503,23 +580,16 @@ void unwrap_nonterminal(Stack& stack, nonterminal* current, clsc::bes::token_str
     // ensure that the stack is correctly pushed
     ReverseOrderPush<Stack> adaptor(stack);
     auto unwrap = find_nonterminal_handler<ReverseOrderPush<Stack>>(current->get_label(), in);
-    auto succeeded = unwrap(adaptor, current, in);
-    if (!succeeded) {
-        throw std::runtime_error("Parsing error");
-    }
+    unwrap(adaptor, current, in);
 }
 
-void process_parse_tree(clsc::bes::ast::program&, clsc::bes::token_stream& in) {
+void create_ast(clsc::bes::ast::program&, clsc::bes::token_stream& in) {
     std::vector<parse_tree_element> stack;
     stack.emplace_back(std::make_unique<program>());
 
     printer_visitor printer;
 
     while (!stack.empty()) {
-        if (!in.good()) {
-            throw std::runtime_error("Parsing error: input program ended unexpectedly");
-        }
-
         parse_tree_element current;
         using std::swap;
         swap(current, stack.back());
@@ -536,8 +606,8 @@ void process_parse_tree(clsc::bes::ast::program&, clsc::bes::token_stream& in) {
                 clsc::bes::annotated_token t;
                 in.get(t);
                 if (t != x) {
-                    throw std::runtime_error("Parsing error: unexpected token " + std::string(t) +
-                                             ", expected " + std::string(x));
+                    throw_parsing_error("unexpected token " + std::string(t) + ", expected " +
+                                        std::string(x));
                 }
             },
             [&](const std::unique_ptr<nonterminal>& x) {
@@ -552,151 +622,12 @@ void process_parse_tree(clsc::bes::ast::program&, clsc::bes::token_stream& in) {
 namespace clsc {
 namespace bes {
 
-namespace {
-std::string unexpected_termination_error(const source_location& loc) {
-    return "Unexpected termination when parsing BES expression at " + std::string(loc);
-}
-
-std::string unexpected_token_error(const source_location& loc, const token& expected) {
-    return "Unexpected token in BES expression at " + std::string(loc) +
-           " expected: " + std::string(expected);
-}
-
-template<size_t N>
-std::array<annotated_token, N> read_sequence(token_stream in, source_location loc,
-                                             const token (&sequence)[N]) {
-    std::array<annotated_token, N> tokens{};
-    for (std::size_t i = 0; i < N; ++i) {
-        if (!in.good()) {
-            throw std::runtime_error(unexpected_termination_error(loc));
-        }
-        in.get(tokens[i]);
-        if (tokens[i].tok != sequence[i]) {
-            throw std::runtime_error(unexpected_token_error(tokens[i].loc, sequence[i]));
-        }
-    }
-    return tokens;
-}
-}  // namespace
-
-std::unique_ptr<ast::expression> parser::parse_expression() {
-    if (!m_in.good()) {
-        return {};
-    }
-
-    annotated_token t;
-    m_in.get(t);
-
-    switch (t.tok.id) {
-    // base cases
-    case token::SEMICOLON: {
-        return std::make_unique<ast::semicolon_expression>(t.loc);
-    }
-    case token::LITERAL_TRUE: {
-        return std::make_unique<ast::bool_literal_expression>(t.loc, true);
-    }
-    case token::LITERAL_FALSE: {
-        return std::make_unique<ast::bool_literal_expression>(t.loc, false);
-    }
-    case token::IDENTIFIER: {
-        annotated_token lookahead = m_in.peek();
-        if (lookahead.tok == TOKEN_ASSIGN) {
-            // TOKEN_IDENTIFIER TOKEN_ASSIGN expr ;  // TODO: do we need this?
-
-            // TODO: handle this branch correctly
-            (void)read_sequence(m_in, t.loc, {TOKEN_ASSIGN});
-            auto expr = parse_expression();
-            (void)read_sequence(m_in, t.loc, {TOKEN_SEMICOLON});
-            return {};
-        }
-        std::string_view name(m_raw_program.data() + t.loc.offset, t.loc.length);
-        return std::make_unique<ast::identifier_expression>(t.loc, name);
-    }
-
-    case token::OR: {
-        break;
-    }
-    case token::AND: {
-        break;
-    }
-    case token::NOT: {
-        // TOKEN_NOT expr ;
-        auto expr = parse_expression();
-        (void)read_sequence(m_in, t.loc, {TOKEN_SEMICOLON});
-        return std::make_unique<ast::not_expression>(t.loc, std::move(expr));
-    }
-    case token::XOR: {
-        break;
-    }
-    case token::ARROW_RIGHT: {
-        break;
-    }
-    case token::ARROW_LEFT: {
-        break;
-    }
-    case token::EQ: {
-        break;
-    }
-    case token::NEQ: {
-        break;
-    }
-    case token::ASSIGN: {
-        break;
-    }
-    case token::ALIAS: {
-        // TOKEN_ALIAS TOKEN_IDENTIFIER TOKEN_ASSIGN TOKEN_LITERAL_STRING ;
-        auto tokens = read_sequence(
-            m_in, t.loc, {TOKEN_IDENTIFIER, TOKEN_ASSIGN, TOKEN_LITERAL_STRING, TOKEN_SEMICOLON});
-
-        std::string_view name(m_raw_program.data() + tokens[0].loc.offset, tokens[0].loc.length);
-        auto id_expr = std::make_unique<ast::identifier_expression>(tokens[0].loc, name);
-        std::string_view string_literal(m_raw_program.data() + tokens[2].loc.offset,
-                                        tokens[2].loc.length);
-        return std::make_unique<ast::alias_expression>(t.loc, std::move(id_expr), string_literal);
-    }
-    case token::VAR: {
-        // TOKEN_VAR TOKEN_IDENTIFIER ;
-        auto tokens = read_sequence(m_in, t.loc, {TOKEN_IDENTIFIER, TOKEN_SEMICOLON});
-
-        std::string_view name(m_raw_program.data() + tokens[0].loc.offset, tokens[0].loc.length);
-        auto id_expr = std::make_unique<ast::identifier_expression>(tokens[0].loc, name);
-        return std::make_unique<ast::var_expression>(t.loc, std::move(id_expr));
-    }
-    case token::EVAL: {
-        // TOKEN_EVAL expr ;
-        auto expr = parse_expression();
-        (void)read_sequence(m_in, t.loc, {TOKEN_SEMICOLON});
-        return std::make_unique<ast::eval_expression>(t.loc, std::move(expr));
-    }
-    case token::LITERAL_STRING: {
-        break;
-    }
-    case token::PAREN_LEFT: {
-        break;
-    }
-    case token::PAREN_RIGHT: {
-        break;
-    }
-    default:
-        throw std::runtime_error("Unexpected BES expression at " + std::string(t.loc));
-    }
-
-    return {};
-}
-
 ast::program parser::parse() {
     ast::program p{};
 
     if (m_in.good()) {
-        process_parse_tree(p, m_in);
+        create_ast(p, m_in);
     }
-
-    // while (m_in.good()) {
-    //     auto expr = parse_expression();
-    //     if (expr) {
-    //         p.add(std::move(expr));
-    //     }
-    // }
 
     return p;
 }
