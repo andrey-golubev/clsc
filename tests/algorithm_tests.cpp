@@ -44,11 +44,20 @@ template<typename T> bool are_equal(T a, T b, int units_in_last_place = 2) {
            std::abs(a - b) < std::numeric_limits<T>::min();  // subnormal result
 }
 
-template<typename ValueType, typename DistributionType, typename GroupOperation,
-         typename TestOperation>
-void power_group_test_template(GroupOperation op, TestOperation test_op, int multiplier_max,
-                               ValueType value_max, bool negate_multiplier = false,
-                               bool negate_value = false, bool exclude_zero_value = false) {
+template<
+    typename ValueType,
+    typename DistributionType,
+    typename GroupOperation,
+    typename TestOperation>
+void power_group_test_template(
+    GroupOperation op,
+    TestOperation test_op,
+    int multiplier_max,
+    ValueType value_max,
+    bool negate_multiplier = false,
+    bool negate_value = false,
+    bool exclude_zero_value = false
+) {
     std::array<int, 12> multipliers{};
     std::array<ValueType, 12> values{};
 
@@ -92,50 +101,106 @@ void power_group_test_template(GroupOperation op, TestOperation test_op, int mul
 
 TEST(power_tests, multiply_integers) {
     power_group_test_template<int, std::uniform_int_distribution<int>>(
-        std::plus<int>{}, std::multiplies<int>{}, 100, 1000, false, false);
+        std::plus<int>{}, std::multiplies<int>{}, 100, 1000, false, false
+    );
     power_group_test_template<int, std::uniform_int_distribution<int>>(
-        std::plus<int>{}, std::multiplies<int>{}, 100, 1000, true, false);
+        std::plus<int>{}, std::multiplies<int>{}, 100, 1000, true, false
+    );
     power_group_test_template<int, std::uniform_int_distribution<int>>(
-        std::plus<int>{}, std::multiplies<int>{}, 100, 1000, false, true);
+        std::plus<int>{}, std::multiplies<int>{}, 100, 1000, false, true
+    );
     power_group_test_template<int, std::uniform_int_distribution<int>>(
-        std::plus<int>{}, std::multiplies<int>{}, 100, 1000, true, true);
+        std::plus<int>{}, std::multiplies<int>{}, 100, 1000, true, true
+    );
 }
 TEST(power_tests, multiply_doubles) {
     power_group_test_template<double, std::uniform_real_distribution<double>>(
-        std::plus<double>{}, std::multiplies<double>{}, 100, 1000, false, false);
+        std::plus<double>{}, std::multiplies<double>{}, 100, 1000, false, false
+    );
     power_group_test_template<double, std::uniform_real_distribution<double>>(
-        std::plus<double>{}, std::multiplies<double>{}, 100, 1000, true, false);
+        std::plus<double>{}, std::multiplies<double>{}, 100, 1000, true, false
+    );
     power_group_test_template<double, std::uniform_real_distribution<double>>(
-        std::plus<double>{}, std::multiplies<double>{}, 100, 1000, false, true);
+        std::plus<double>{}, std::multiplies<double>{}, 100, 1000, false, true
+    );
     power_group_test_template<double, std::uniform_real_distribution<double>>(
-        std::plus<double>{}, std::multiplies<double>{}, 100, 1000, true, true);
+        std::plus<double>{}, std::multiplies<double>{}, 100, 1000, true, true
+    );
 }
 
 TEST(power_tests, raise_integers_to_power) {
     power_group_test_template<int, std::uniform_int_distribution<int>>(
-        std::multiplies<int>{}, [](int v, int m) { return int(std::pow(v, m)); }, 5, 31, false,
-        false, true);
+        std::multiplies<int>{},
+        [](int v, int m) { return int(std::pow(v, m)); },
+        5,
+        31,
+        false,
+        false,
+        true
+    );
     power_group_test_template<int, std::uniform_int_distribution<int>>(
-        std::multiplies<int>{}, [](int v, int m) { return int(std::pow(v, m)); }, 5, 31, true,
-        false, true);
+        std::multiplies<int>{},
+        [](int v, int m) { return int(std::pow(v, m)); },
+        5,
+        31,
+        true,
+        false,
+        true
+    );
     power_group_test_template<int, std::uniform_int_distribution<int>>(
-        std::multiplies<int>{}, [](int v, int m) { return int(std::pow(v, m)); }, 5, 31, false,
-        true, true);
+        std::multiplies<int>{},
+        [](int v, int m) { return int(std::pow(v, m)); },
+        5,
+        31,
+        false,
+        true,
+        true
+    );
     power_group_test_template<int, std::uniform_int_distribution<int>>(
-        std::multiplies<int>{}, [](int v, int m) { return int(std::pow(v, m)); }, 5, 31, true, true,
-        true);
+        std::multiplies<int>{},
+        [](int v, int m) { return int(std::pow(v, m)); },
+        5,
+        31,
+        true,
+        true,
+        true
+    );
 }
 TEST(power_tests, raise_doubles_to_power) {
     power_group_test_template<double, std::uniform_real_distribution<double>>(
-        std::multiplies<double>{}, [](double v, double m) { return std::pow(v, m); }, 5, 31.0,
-        false, false, true);
+        std::multiplies<double>{},
+        [](double v, double m) { return std::pow(v, m); },
+        5,
+        31.0,
+        false,
+        false,
+        true
+    );
     power_group_test_template<double, std::uniform_real_distribution<double>>(
-        std::multiplies<double>{}, [](double v, double m) { return std::pow(v, m); }, 3, 31.0, true,
-        false, true);
+        std::multiplies<double>{},
+        [](double v, double m) { return std::pow(v, m); },
+        3,
+        31.0,
+        true,
+        false,
+        true
+    );
     power_group_test_template<double, std::uniform_real_distribution<double>>(
-        std::multiplies<double>{}, [](double v, double m) { return std::pow(v, m); }, 5, 31.0,
-        false, true, true);
+        std::multiplies<double>{},
+        [](double v, double m) { return std::pow(v, m); },
+        5,
+        31.0,
+        false,
+        true,
+        true
+    );
     power_group_test_template<double, std::uniform_real_distribution<double>>(
-        std::multiplies<double>{}, [](double v, double m) { return std::pow(v, m); }, 5, 31.0, true,
-        true, true);
+        std::multiplies<double>{},
+        [](double v, double m) { return std::pow(v, m); },
+        5,
+        31.0,
+        true,
+        true,
+        true
+    );
 }

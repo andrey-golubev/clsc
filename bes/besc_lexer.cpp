@@ -103,10 +103,11 @@ class lexer_state {
         }
 
         const char extra_unacceptable_first_characters[] = {':'};
-        if (std::isdigit(m_buffer[0]) ||
-            std::any_of(std::begin(extra_unacceptable_first_characters),
-                        std::end(extra_unacceptable_first_characters),
-                        [&](char x) { return m_buffer[0] == x; })) {
+        if (std::isdigit(m_buffer[0]) || std::any_of(
+                                             std::begin(extra_unacceptable_first_characters),
+                                             std::end(extra_unacceptable_first_characters),
+                                             [&](char x) { return m_buffer[0] == x; }
+                                         )) {
             return false;
         }
 
@@ -130,8 +131,9 @@ class lexer_state {
             return false;
         }
         // cannot have " in the middle (escaping is not supported)
-        if (std::any_of(m_buffer.begin() + 1, m_buffer.end() - 1,
-                        [](char c) { return c == '"'; })) {
+        if (std::any_of(m_buffer.begin() + 1, m_buffer.end() - 1, [](char c) {
+                return c == '"';
+            })) {
             return false;
         }
         return m_buffer.front() == '"' && m_buffer.back() == '"';
@@ -177,8 +179,9 @@ public:
 
     // flushes the buffer, asserting if buffer size != ExpectedSize
     template<std::size_t ExpectedSize> void flush() {
-        assert((m_buffer.empty() || m_buffer.size() == ExpectedSize) &&
-               "must not have called flush()");
+        assert(
+            (m_buffer.empty() || m_buffer.size() == ExpectedSize) && "must not have called flush()"
+        );
         m_buffer.clear();
     }
 };
@@ -203,13 +206,15 @@ void read_token(token_stream& out, lexer_state& state, source_location new_loc) 
     }
 }
 
-void try_read_token(token_stream& out, char lookahead, lexer_state& state,
-                    source_location new_loc) {
+void try_read_token(
+    token_stream& out, char lookahead, lexer_state& state, source_location new_loc
+) {
     static const auto delimiters = []() {
         const auto delim = [](token t) {
             const auto& registry = const_token_registry();
-            auto it = std::find_if(registry.begin(), registry.end(),
-                                   [&](const auto& p) { return p.second == t; });
+            auto it = std::find_if(registry.begin(), registry.end(), [&](const auto& p) {
+                return p.second == t;
+            });
             assert(registry.end() != it);
             return it->first.front();
         };
@@ -235,8 +240,10 @@ void try_read_token(token_stream& out, char lookahead, lexer_state& state,
         return registry.end() != registry.find(pattern);
     };
 
-    const bool next_is_delimiter = std::any_of(std::begin(delimiters), std::end(delimiters),
-                                               [&](char x) { return lookahead == x; });
+    const bool next_is_delimiter =
+        std::any_of(std::begin(delimiters), std::end(delimiters), [&](char x) {
+            return lookahead == x;
+        });
     // collect as many characters as possible until a delimiter is coming next
     if (!next_is_delimiter) {
         // special case: even if there is no delimiter in the lookup, state
@@ -315,8 +322,9 @@ void lexer::tokenize() {
     read_token(m_out, state, {line, column, offset});
 }
 
-void lexer::process_literal_string(char start, lexer_state& state, int& line, int& column,
-                                   std::size_t& offset) {
+void lexer::process_literal_string(
+    char start, lexer_state& state, int& line, int& column, std::size_t& offset
+) {
     for (char current = '\0'; m_in.get(current).good();) {
         if (current == start) {
             state.add(current);

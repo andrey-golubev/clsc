@@ -104,8 +104,9 @@ TEST(count_until_tests, date_time) {
         const auto not_time_symbols = [](char c) {
             return !(c == '.' || std::isdigit(static_cast<unsigned char>(c)));
         };
-        auto counted = clsc::count_until(date_time.cbegin() + date_count + 1, date_time.cend(),
-                                         not_time_symbols)
+        auto counted = clsc::count_until(
+                           date_time.cbegin() + date_count + 1, date_time.cend(), not_time_symbols
+        )
                            .second;
         EXPECT_EQ(5, counted);
     }
