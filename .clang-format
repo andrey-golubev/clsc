@@ -1,3 +1,6 @@
+# run for repo:
+# find . -path '*external*' -prune -or -iname *.h -or -iname *.cpp | xargs clang-format -i
+Standard: c++17
 AllowShortLoopsOnASingleLine: true
 ColumnLimit: 100
 SpacesBeforeTrailingComments: 2
@@ -6,3 +9,8 @@ TabWidth: 4
 AccessModifierOffset: -4
 PointerAlignment: Left
 SpaceAfterTemplateKeyword: false
+AlignArrayOfStructures: Left
+BinPackArguments: false
+BinPackParameters: false
+# TODO: or AlwaysBreak policy instead?
+AlignAfterOpenBracket: BlockIndent

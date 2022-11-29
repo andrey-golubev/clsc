@@ -96,15 +96,17 @@ TEST(helpers_tests, trim_string_more_than_one) {
 
 TEST(helpers_tests, join_empty_range) {
     std::vector<int> empty{};
-    auto actual = clsc::helpers::join<char>(empty.begin(), empty.end(),
-                                            [](int x) { return std::to_string(x); });
+    auto actual = clsc::helpers::join<char>(empty.begin(), empty.end(), [](int x) {
+        return std::to_string(x);
+    });
     ASSERT_EQ(actual, std::string{});
 }
 
 TEST(helpers_tests, join_nonempty_range) {
     std::vector<int> nonempty{1, 2, -11, 235};
-    auto actual = clsc::helpers::join<char>(nonempty.begin(), nonempty.end(),
-                                            [](int x) { return std::to_string(x); });
+    auto actual = clsc::helpers::join<char>(nonempty.begin(), nonempty.end(), [](int x) {
+        return std::to_string(x);
+    });
     ASSERT_EQ(actual, "1,2,-11,235");
 }
 

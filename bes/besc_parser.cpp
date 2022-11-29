@@ -363,21 +363,22 @@ inline std::string expected_token_message(clsc::bes::token t) {
     return "Expected token <" + std::string(t) + ">";
 }
 
-std::string unexpected_token_error(const clsc::bes::source_location& loc,
-                                   const clsc::bes::token& expected) {
+std::string
+unexpected_token_error(const clsc::bes::source_location& loc, const clsc::bes::token& expected) {
     return "Unexpected token in BES expression at " + std::string(loc) + ". " +
            expected_token_message(expected);
 }
 
 // TODO: once ready, add [[nodiscard]]
 template<size_t N>
-std::array<clsc::bes::annotated_token, N> read_sequence(clsc::bes::token_stream in,
-                                                        const clsc::bes::token (&sequence)[N]) {
+std::array<clsc::bes::annotated_token, N>
+read_sequence(clsc::bes::token_stream in, const clsc::bes::token (&sequence)[N]) {
     std::array<clsc::bes::annotated_token, N> tokens{};
     for (std::size_t i = 0; i < N; ++i) {
         if (!in.good()) {
-            throw_parsing_error("input program ended unexpectedly. " +
-                                expected_token_message(sequence[i]));
+            throw_parsing_error(
+                "input program ended unexpectedly. " + expected_token_message(sequence[i])
+            );
         }
         in.get(tokens[i]);
         if (tokens[i].tok != sequence[i]) {
@@ -398,12 +399,14 @@ bool consider_empty(clsc::bes::token_stream& in) {
 template<typename Stack>
 using nonterminal_handler = void (*)(Stack&, nonterminal*, clsc::bes::token_stream&);
 template<typename Stack>
-nonterminal_handler<Stack> find_nonterminal_handler(parse_tree_nonterminal::label l,
-                                                    clsc::bes::token_stream& in) {
+nonterminal_handler<Stack>
+find_nonterminal_handler(parse_tree_nonterminal::label l, clsc::bes::token_stream& in) {
 #define NONTERMINAL_CASE(NAME)                                                                     \
     case parse_tree_nonterminal::label::NAME:                                                      \
-        return [](Stack & stack [[maybe_unused]], nonterminal * This [[maybe_unused]],             \
-                  clsc::bes::token_stream & in [[maybe_unused]])
+        return                                                                                     \
+            [](Stack & stack [[maybe_unused]],                                                     \
+               nonterminal * This [[maybe_unused]],                                                \
+               clsc::bes::token_stream & in [[maybe_unused]])
 
     switch (l) {
         NONTERMINAL_CASE(program) { stack.emplace_back(std::make_unique<statement_list>()); };
@@ -419,8 +422,10 @@ nonterminal_handler<Stack> find_nonterminal_handler(parse_tree_nonterminal::labe
         };
         NONTERMINAL_CASE(single_token_expression) {  // TODO: delete this!
             auto next_token = in.peek();
-            const auto suitable = {clsc::bes::TOKEN_IDENTIFIER, clsc::bes::TOKEN_LITERAL_TRUE,
-                                   clsc::bes::TOKEN_LITERAL_FALSE};
+            const auto suitable = {
+                clsc::bes::TOKEN_IDENTIFIER,
+                clsc::bes::TOKEN_LITERAL_TRUE,
+                clsc::bes::TOKEN_LITERAL_FALSE};
             if (std::end(suitable) !=
                 std::find(std::begin(suitable), std::end(suitable), next_token)) {
                 in.get(fast_cast<single_token_expression*>(This)->token);
@@ -457,8 +462,13 @@ nonterminal_handler<Stack> find_nonterminal_handler(parse_tree_nonterminal::labe
             stack.emplace_back(std::make_unique<substatement>());
         };
         NONTERMINAL_CASE(alias_statement) {
-            read_sequence(in, {clsc::bes::TOKEN_ALIAS, clsc::bes::TOKEN_IDENTIFIER,
-                               clsc::bes::TOKEN_ASSIGN, clsc::bes::TOKEN_LITERAL_STRING});
+            read_sequence(
+                in,
+                {clsc::bes::TOKEN_ALIAS,
+                 clsc::bes::TOKEN_IDENTIFIER,
+                 clsc::bes::TOKEN_ASSIGN,
+                 clsc::bes::TOKEN_LITERAL_STRING}
+            );
         };
         NONTERMINAL_CASE(var_statement) {
             read_sequence(in, {clsc::bes::TOKEN_VAR, clsc::bes::TOKEN_IDENTIFIER});
@@ -486,8 +496,10 @@ nonterminal_handler<Stack> find_nonterminal_handler(parse_tree_nonterminal::labe
             //  | TOKEN_LITERAL_TRUE
             //  | TOKEN_IDENTIFIER
             const auto next_token = in.peek();
-            const auto suitable = {clsc::bes::TOKEN_IDENTIFIER, clsc::bes::TOKEN_LITERAL_TRUE,
-                                   clsc::bes::TOKEN_LITERAL_FALSE};
+            const auto suitable = {
+                clsc::bes::TOKEN_IDENTIFIER,
+                clsc::bes::TOKEN_LITERAL_TRUE,
+                clsc::bes::TOKEN_LITERAL_FALSE};
             if (std::end(suitable) !=
                 std::find(std::begin(suitable), std::end(suitable), next_token)) {
                 // TODO: do something with this token?
@@ -515,18 +527,26 @@ nonterminal_handler<Stack> find_nonterminal_handler(parse_tree_nonterminal::labe
 
             const auto next_token = in.peek();
             const auto parse_candidates = {
-                clsc::bes::TOKEN_NEQ,         clsc::bes::TOKEN_EQ,  clsc::bes::TOKEN_ARROW_LEFT,
-                clsc::bes::TOKEN_ARROW_RIGHT, clsc::bes::TOKEN_XOR, clsc::bes::TOKEN_AND,
+                clsc::bes::TOKEN_NEQ,
+                clsc::bes::TOKEN_EQ,
+                clsc::bes::TOKEN_ARROW_LEFT,
+                clsc::bes::TOKEN_ARROW_RIGHT,
+                clsc::bes::TOKEN_XOR,
+                clsc::bes::TOKEN_AND,
                 clsc::bes::TOKEN_OR,
             };
             const bool valid_parse =
-                std::any_of(std::begin(parse_candidates), std::end(parse_candidates),
-                            [&](auto x) { return next_token == x; });
+                std::any_of(std::begin(parse_candidates), std::end(parse_candidates), [&](auto x) {
+                    return next_token == x;
+                });
             if (!valid_parse) {
-                const auto sequence = clsc::helpers::join<char>(std::begin(parse_candidates),
-                                                                std::end(parse_candidates), ' ');
-                throw_parsing_error("unexpected token " + std::string(next_token) +
-                                    ". Expected one of { " + sequence + " }");
+                const auto sequence = clsc::helpers::join<char>(
+                    std::begin(parse_candidates), std::end(parse_candidates), ' '
+                );
+                throw_parsing_error(
+                    "unexpected token " + std::string(next_token) + ". Expected one of { " +
+                    sequence + " }"
+                );
             }
             // TODO: do something with this token
             clsc::bes::annotated_token dummy;
@@ -606,14 +626,16 @@ void create_ast(clsc::bes::ast::program&, clsc::bes::token_stream& in) {
                 clsc::bes::annotated_token t;
                 in.get(t);
                 if (t != x) {
-                    throw_parsing_error("unexpected token " + std::string(t) + ", expected " +
-                                        std::string(x));
+                    throw_parsing_error(
+                        "unexpected token " + std::string(t) + ", expected " + std::string(x)
+                    );
                 }
             },
             [&](const std::unique_ptr<nonterminal>& x) {
                 x->apply(&printer);
                 unwrap_nonterminal(stack, x.get(), in);
-            });
+            }
+        );
     }
 }
 

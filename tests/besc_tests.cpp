@@ -73,7 +73,8 @@ TEST(besc_lexer_tests_basic, creatable) {
 struct besc_lexer_tests : testing::TestWithParam<std::pair<std::string, std::string>> {
     static auto test_name_printer() {
         static test_name_corrector correct{};
-        return [](const testing::TestParamInfo<std::pair<std::string, std::string>>& info) mutable {
+        using TestParamInfo = testing::TestParamInfo<std::pair<std::string, std::string>>;
+        return [](const TestParamInfo& info) {
             const auto& output = info.param.second;
             std::string test_name;
             test_name.reserve(output.size());
@@ -114,44 +115,64 @@ TEST_P(besc_lexer_tests, all) {
 }
 
 INSTANTIATE_TEST_CASE_P(
-    standalone_tokens, besc_lexer_tests,
+    standalone_tokens,
+    besc_lexer_tests,
     testing::Values(
-        std::make_pair("||", "OR 0:0\n"), std::make_pair("&&", "AND 0:0\n"),
-        std::make_pair("~", "NOT 0:0\n"), std::make_pair("^", "XOR 0:0\n"),
-        std::make_pair("->", "ARROW_RIGHT 0:0\n"), std::make_pair("<-", "ARROW_LEFT 0:0\n"),
-        std::make_pair("==", "EQ 0:0\n"), std::make_pair("!=", "NEQ 0:0\n"),
-        std::make_pair("=", "ASSIGN 0:0\n"), std::make_pair("symbol", "ALIAS 0:0\n"),
-        std::make_pair("var", "VAR 0:0\n"), std::make_pair("eval", "EVAL 0:0\n"),
-        std::make_pair(";", "SEMICOLON 0:0\n"), std::make_pair("x", "IDENTIFIER 0:0\n"),
-        std::make_pair("_90iyu", "IDENTIFIER 0:0\n"), std::make_pair("true", "LITERAL_TRUE 0:0\n"),
+        std::make_pair("||", "OR 0:0\n"),
+        std::make_pair("&&", "AND 0:0\n"),
+        std::make_pair("~", "NOT 0:0\n"),
+        std::make_pair("^", "XOR 0:0\n"),
+        std::make_pair("->", "ARROW_RIGHT 0:0\n"),
+        std::make_pair("<-", "ARROW_LEFT 0:0\n"),
+        std::make_pair("==", "EQ 0:0\n"),
+        std::make_pair("!=", "NEQ 0:0\n"),
+        std::make_pair("=", "ASSIGN 0:0\n"),
+        std::make_pair("symbol", "ALIAS 0:0\n"),
+        std::make_pair("var", "VAR 0:0\n"),
+        std::make_pair("eval", "EVAL 0:0\n"),
+        std::make_pair(";", "SEMICOLON 0:0\n"),
+        std::make_pair("x", "IDENTIFIER 0:0\n"),
+        std::make_pair("_90iyu", "IDENTIFIER 0:0\n"),
+        std::make_pair("true", "LITERAL_TRUE 0:0\n"),
         std::make_pair("false", "LITERAL_FALSE 0:0\n"),
         std::make_pair("\"\"", "LITERAL_STRING 0:0\n"),
         std::make_pair("\"hello! world\"", "LITERAL_STRING 0:0\n"),
-        std::make_pair("(", "PAREN_LEFT 0:0\n"), std::make_pair(")", "PAREN_RIGHT 0:0\n"),
+        std::make_pair("(", "PAREN_LEFT 0:0\n"),
+        std::make_pair(")", "PAREN_RIGHT 0:0\n"),
 
         // special cases
-        std::make_pair(" ", ""), std::make_pair("\t", "")),
-    besc_lexer_tests::test_name_printer());
+        std::make_pair(" ", ""),
+        std::make_pair("\t", "")
+    ),
+    besc_lexer_tests::test_name_printer()
+);
 
 INSTANTIATE_TEST_CASE_P(
-    many_tokens, besc_lexer_tests,
+    many_tokens,
+    besc_lexer_tests,
     testing::Values(
         std::make_pair("_x==_01y", "IDENTIFIER 0:0\nEQ 0:2\nIDENTIFIER 0:4\n"),
         std::make_pair("symbol x;", "ALIAS 0:0\nIDENTIFIER 0:7\nSEMICOLON 0:8\n"),
         std::make_pair("_x == _01y", "IDENTIFIER 0:0\nEQ 0:3\nIDENTIFIER 0:6\n"),
         std::make_pair(
             "symbol x = \"foo && bar\";",
-            "ALIAS 0:0\nIDENTIFIER 0:7\nASSIGN 0:9\nLITERAL_STRING 0:11\nSEMICOLON 0:23\n"),
-        std::make_pair("( x || y ) && z;",
-                       "PAREN_LEFT 0:0\nIDENTIFIER 0:2\nOR 0:4\nIDENTIFIER 0:7\nPAREN_RIGHT "
-                       "0:9\nAND 0:11\nIDENTIFIER 0:14\nSEMICOLON 0:15\n"),
+            "ALIAS 0:0\nIDENTIFIER 0:7\nASSIGN 0:9\nLITERAL_STRING 0:11\nSEMICOLON 0:23\n"
+        ),
+        std::make_pair(
+            "( x || y ) && z;",
+            "PAREN_LEFT 0:0\nIDENTIFIER 0:2\nOR 0:4\nIDENTIFIER 0:7\nPAREN_RIGHT "
+            "0:9\nAND 0:11\nIDENTIFIER 0:14\nSEMICOLON 0:15\n"
+        ),
 
         // multi-line
         std::make_pair(
             "symbol x=\"A || B\";\neval x;",
             "ALIAS 0:0\nIDENTIFIER 0:7\nASSIGN 0:8\nLITERAL_STRING 0:9\nSEMICOLON 0:17\nEVAL "
-            "1:0\nIDENTIFIER 1:5\nSEMICOLON 1:6\n")),
-    besc_lexer_tests::test_name_printer());
+            "1:0\nIDENTIFIER 1:5\nSEMICOLON 1:6\n"
+        )
+    ),
+    besc_lexer_tests::test_name_printer()
+);
 
 clsc::bes::annotated_token annotated(clsc::bes::token t) {
     return clsc::bes::annotated_token{t, {}};
@@ -168,8 +189,9 @@ TEST(besc_parser_tests_basic, creatable) {
 struct besc_parser_tests : testing::TestWithParam<std::pair<clsc::bes::token_stream, std::string>> {
     static auto test_name_printer() {
         static test_name_corrector correct{};
-        return [](const testing::TestParamInfo<std::pair<clsc::bes::token_stream, std::string>>&
-                      info) {
+        using TestParamInfo =
+            testing::TestParamInfo<std::pair<clsc::bes::token_stream, std::string>>;
+        return [](const TestParamInfo& info) {
             auto copy = info.param.first;
             std::string test_name;
             while (copy.good()) {
@@ -193,17 +215,23 @@ TEST_P(besc_parser_tests, all) {
 }
 
 INSTANTIATE_TEST_CASE_P(
-    simple_tokens, besc_parser_tests,
+    simple_tokens,
+    besc_parser_tests,
     testing::Values(
         std::make_pair<clsc::bes::token_stream>({annotated(clsc::bes::TOKEN_SEMICOLON)}, ";"),
         std::make_pair<clsc::bes::token_stream>({annotated(clsc::bes::TOKEN_IDENTIFIER)}, "x"),
-        std::make_pair<clsc::bes::token_stream>({annotated(clsc::bes::TOKEN_IDENTIFIER),
-                                                 annotated(clsc::bes::TOKEN_SEMICOLON)},
-                                                "M_231K0_sd;"),
-        std::make_pair<clsc::bes::token_stream>({annotated(clsc::bes::TOKEN_LITERAL_TRUE),
-                                                 annotated(clsc::bes::TOKEN_SEMICOLON)},
-                                                "true;"),
-        std::make_pair<clsc::bes::token_stream>({annotated(clsc::bes::TOKEN_LITERAL_FALSE),
-                                                 annotated(clsc::bes::TOKEN_SEMICOLON)},
-                                                "false;")),
-    besc_parser_tests::test_name_printer());
+        std::make_pair<clsc::bes::token_stream>(
+            {annotated(clsc::bes::TOKEN_IDENTIFIER), annotated(clsc::bes::TOKEN_SEMICOLON)},
+            "M_231K0_sd;"
+        ),
+        std::make_pair<clsc::bes::token_stream>(
+            {annotated(clsc::bes::TOKEN_LITERAL_TRUE), annotated(clsc::bes::TOKEN_SEMICOLON)},
+            "true;"
+        ),
+        std::make_pair<clsc::bes::token_stream>(
+            {annotated(clsc::bes::TOKEN_LITERAL_FALSE), annotated(clsc::bes::TOKEN_SEMICOLON)},
+            "false;"
+        )
+    ),
+    besc_parser_tests::test_name_printer()
+);
