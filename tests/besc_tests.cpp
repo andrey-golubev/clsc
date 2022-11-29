@@ -29,19 +29,73 @@
 #include "besc_parser.hpp"
 #include "tokens.hpp"
 #include <besc_lexer.hpp>
+#include <cctype>
+#include <gtest/gtest-param-test.h>
+#include <string>
 #include <token_stream.hpp>
+#include <unordered_map>
 
 #include <gtest/gtest.h>
 
 #include <sstream>
+#include <utility>
 
-TEST(besc_lexer_tests, creatable) {
+struct test_name_corrector {
+    std::string operator()(std::string test_name) {
+        // remove trailing '_'
+        while (!test_name.empty() && test_name[test_name.size() - 1] == '_') {
+            test_name.pop_back();
+        }
+        // ensure non-empty name
+        if (test_name.empty()) {
+            test_name = "EMPTY";
+        }
+
+        auto it = repeats.find(test_name);
+        if (it == repeats.end()) {
+            repeats.insert({test_name, 1});
+            return test_name;
+        }
+        test_name += std::to_string(it->second);
+        return test_name;
+    }
+
+private:
+    std::unordered_map<std::string, std::size_t> repeats;
+};
+
+TEST(besc_lexer_tests_basic, creatable) {
     clsc::bes::token_stream tokout;
     clsc::bes::lexer lexer{std::cin, tokout};
     (void)lexer;
 }
 
-void tokenize(const std::pair<std::string, std::string>& in_out) {
+struct besc_lexer_tests : testing::TestWithParam<std::pair<std::string, std::string>> {
+    static auto test_name_printer() {
+        static test_name_corrector correct{};
+        return [](const testing::TestParamInfo<std::pair<std::string, std::string>>& info) mutable {
+            const auto& output = info.param.second;
+            std::string test_name;
+            test_name.reserve(output.size());
+            for (char c : output) {
+                if (std::isalpha(c) || c == '_') {
+                    test_name.push_back(c);
+                }
+                if (c == '\n') {
+                    test_name.push_back('_');
+                    test_name.push_back('_');
+                }
+            }
+
+            // deduplicate and all that
+            return correct(std::move(test_name));
+        };
+    }
+};
+
+TEST_P(besc_lexer_tests, all) {
+    const std::pair<std::string, std::string>& in_out = GetParam();
+
     std::stringstream ssin;
     clsc::bes::token_stream tokout;
     ssin << in_out.first;
@@ -59,96 +113,97 @@ void tokenize(const std::pair<std::string, std::string>& in_out) {
     EXPECT_EQ(in_out.second, ssout.str());
 }
 
-TEST(besc_lexer_tests, standalone_tokens) {
-    std::vector<std::pair<std::string, std::string>> in_out_data{
-        {"||", "OR 0:0\n"},
-        {"&&", "AND 0:0\n"},
-        {"~", "NOT 0:0\n"},
-        {"^", "XOR 0:0\n"},
-        {"->", "ARROW_RIGHT 0:0\n"},
-        {"<-", "ARROW_LEFT 0:0\n"},
-        {"==", "EQ 0:0\n"},
-        {"!=", "NEQ 0:0\n"},
-        {"=", "ASSIGN 0:0\n"},
-        {"symbol", "ALIAS 0:0\n"},
-        {"var", "VAR 0:0\n"},
-        {"eval", "EVAL 0:0\n"},
-        {";", "SEMICOLON 0:0\n"},
-        {"x", "IDENTIFIER 0:0\n"},
-        {"_90iyu", "IDENTIFIER 0:0\n"},
-        {"true", "LITERAL_TRUE 0:0\n"},
-        {"false", "LITERAL_FALSE 0:0\n"},
-        {"\"\"", "LITERAL_STRING 0:0\n"},
-        {"\"hello! world\"", "LITERAL_STRING 0:0\n"},
-        {"(", "PAREN_LEFT 0:0\n"},
-        {")", "PAREN_RIGHT 0:0\n"},
+INSTANTIATE_TEST_CASE_P(
+    standalone_tokens, besc_lexer_tests,
+    testing::Values(
+        std::make_pair("||", "OR 0:0\n"), std::make_pair("&&", "AND 0:0\n"),
+        std::make_pair("~", "NOT 0:0\n"), std::make_pair("^", "XOR 0:0\n"),
+        std::make_pair("->", "ARROW_RIGHT 0:0\n"), std::make_pair("<-", "ARROW_LEFT 0:0\n"),
+        std::make_pair("==", "EQ 0:0\n"), std::make_pair("!=", "NEQ 0:0\n"),
+        std::make_pair("=", "ASSIGN 0:0\n"), std::make_pair("symbol", "ALIAS 0:0\n"),
+        std::make_pair("var", "VAR 0:0\n"), std::make_pair("eval", "EVAL 0:0\n"),
+        std::make_pair(";", "SEMICOLON 0:0\n"), std::make_pair("x", "IDENTIFIER 0:0\n"),
+        std::make_pair("_90iyu", "IDENTIFIER 0:0\n"), std::make_pair("true", "LITERAL_TRUE 0:0\n"),
+        std::make_pair("false", "LITERAL_FALSE 0:0\n"),
+        std::make_pair("\"\"", "LITERAL_STRING 0:0\n"),
+        std::make_pair("\"hello! world\"", "LITERAL_STRING 0:0\n"),
+        std::make_pair("(", "PAREN_LEFT 0:0\n"), std::make_pair(")", "PAREN_RIGHT 0:0\n"),
 
         // special cases
-        {" ", ""},
-        {"\t", ""},
-    };
-    for (const auto& in_out : in_out_data) {
-        tokenize(in_out);
-    }
-}
+        std::make_pair(" ", ""), std::make_pair("\t", "")),
+    besc_lexer_tests::test_name_printer());
 
-TEST(besc_lexer_tests, many_tokens) {
-    std::vector<std::pair<std::string, std::string>> in_out_data{
-        {"_x==_01y", "IDENTIFIER 0:0\nEQ 0:2\nIDENTIFIER 0:4\n"},
-        {"symbol x;", "ALIAS 0:0\nIDENTIFIER 0:7\nSEMICOLON 0:8\n"},
-        {
-            "_x == _01y",
-            "IDENTIFIER 0:0\nEQ 0:3\nIDENTIFIER 0:6\n",
-        },
-        {"symbol x = \"foo && bar\";",
-         "ALIAS 0:0\nIDENTIFIER 0:7\nASSIGN 0:9\nLITERAL_STRING 0:11\nSEMICOLON 0:23\n"},
-        {"( x || y ) && z;", "PAREN_LEFT 0:0\nIDENTIFIER 0:2\nOR 0:4\nIDENTIFIER 0:7\nPAREN_RIGHT "
-                             "0:9\nAND 0:11\nIDENTIFIER 0:14\nSEMICOLON 0:15\n"},
+INSTANTIATE_TEST_CASE_P(
+    many_tokens, besc_lexer_tests,
+    testing::Values(
+        std::make_pair("_x==_01y", "IDENTIFIER 0:0\nEQ 0:2\nIDENTIFIER 0:4\n"),
+        std::make_pair("symbol x;", "ALIAS 0:0\nIDENTIFIER 0:7\nSEMICOLON 0:8\n"),
+        std::make_pair("_x == _01y", "IDENTIFIER 0:0\nEQ 0:3\nIDENTIFIER 0:6\n"),
+        std::make_pair(
+            "symbol x = \"foo && bar\";",
+            "ALIAS 0:0\nIDENTIFIER 0:7\nASSIGN 0:9\nLITERAL_STRING 0:11\nSEMICOLON 0:23\n"),
+        std::make_pair("( x || y ) && z;",
+                       "PAREN_LEFT 0:0\nIDENTIFIER 0:2\nOR 0:4\nIDENTIFIER 0:7\nPAREN_RIGHT "
+                       "0:9\nAND 0:11\nIDENTIFIER 0:14\nSEMICOLON 0:15\n"),
 
         // multi-line
-        {"symbol x=\"A || B\";\neval x;",
-         "ALIAS 0:0\nIDENTIFIER 0:7\nASSIGN 0:8\nLITERAL_STRING 0:9\nSEMICOLON 0:17\nEVAL "
-         "1:0\nIDENTIFIER 1:5\nSEMICOLON 1:6\n"},
-    };
-    for (const auto& in_out : in_out_data) {
-        tokenize(in_out);
-    }
+        std::make_pair(
+            "symbol x=\"A || B\";\neval x;",
+            "ALIAS 0:0\nIDENTIFIER 0:7\nASSIGN 0:8\nLITERAL_STRING 0:9\nSEMICOLON 0:17\nEVAL "
+            "1:0\nIDENTIFIER 1:5\nSEMICOLON 1:6\n")),
+    besc_lexer_tests::test_name_printer());
+
+clsc::bes::annotated_token annotated(clsc::bes::token t) {
+    return clsc::bes::annotated_token{t, {}};
 }
 
-TEST(besc_parser_tests, creatable) {
+TEST(besc_parser_tests_basic, creatable) {
     clsc::bes::token_stream tokin;
-    tokin << clsc::bes::annotated_token{clsc::bes::TOKEN_LITERAL_TRUE, {}};
+    tokin << annotated(clsc::bes::TOKEN_LITERAL_TRUE);
     std::string raw_program = "true";
     clsc::bes::parser p{tokin, raw_program};
     (void)p;
 }
 
-TEST(besc_parser_tests, standalone_tokens) {
-    std::vector<clsc::bes::token_stream> streams = {
-        []() {
-            clsc::bes::token_stream t;
-            t << clsc::bes::annotated_token{clsc::bes::TOKEN_IDENTIFIER, {}};
-            return t;
-        }(),
-        []() {
-            clsc::bes::token_stream t;
-            t << clsc::bes::annotated_token{clsc::bes::TOKEN_LITERAL_TRUE, {}};
-            return t;
-        }(),
-        []() {
-            clsc::bes::token_stream t;
-            t << clsc::bes::annotated_token{clsc::bes::TOKEN_LITERAL_FALSE, {}};
-            return t;
-        }(),
-    };
-    std::vector<std::string> programs = {"x", "true", "false"};
-    assert(streams.size() == programs.size());
+struct besc_parser_tests : testing::TestWithParam<std::pair<clsc::bes::token_stream, std::string>> {
+    static auto test_name_printer() {
+        static test_name_corrector correct{};
+        return [](const testing::TestParamInfo<std::pair<clsc::bes::token_stream, std::string>>&
+                      info) {
+            auto copy = info.param.first;
+            std::string test_name;
+            while (copy.good()) {
+                clsc::bes::annotated_token t;
+                copy.get(t);
+                test_name += std::string(t.tok) + "__";
+            }
 
-    for (size_t i = 0; i < streams.size(); ++i) {
-        auto& tokin = streams[i];
-        const auto& raw_program = programs[i];
-
-        clsc::bes::parser parser{tokin, raw_program};
-        parser.parse();
+            // deduplicate and all that
+            return correct(std::move(test_name));
+        };
     }
+};
+
+TEST_P(besc_parser_tests, all) {
+    auto param = GetParam();
+    auto& tokin = param.first;
+    const auto& raw_program = param.second;
+    clsc::bes::parser parser{tokin, raw_program};
+    parser.parse();
 }
+
+INSTANTIATE_TEST_CASE_P(
+    simple_tokens, besc_parser_tests,
+    testing::Values(
+        std::make_pair<clsc::bes::token_stream>({annotated(clsc::bes::TOKEN_SEMICOLON)}, ";"),
+        std::make_pair<clsc::bes::token_stream>({annotated(clsc::bes::TOKEN_IDENTIFIER)}, "x"),
+        std::make_pair<clsc::bes::token_stream>({annotated(clsc::bes::TOKEN_IDENTIFIER),
+                                                 annotated(clsc::bes::TOKEN_SEMICOLON)},
+                                                "M_231K0_sd;"),
+        std::make_pair<clsc::bes::token_stream>({annotated(clsc::bes::TOKEN_LITERAL_TRUE),
+                                                 annotated(clsc::bes::TOKEN_SEMICOLON)},
+                                                "true;"),
+        std::make_pair<clsc::bes::token_stream>({annotated(clsc::bes::TOKEN_LITERAL_FALSE),
+                                                 annotated(clsc::bes::TOKEN_SEMICOLON)},
+                                                "false;")),
+    besc_parser_tests::test_name_printer());
