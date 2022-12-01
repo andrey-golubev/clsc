@@ -69,7 +69,7 @@ TOKEN_PAREN_LEFT        (
 TOKEN_PAREN_RIGHT       )
 
 %% grammar
-program : statement_list
+program : statement_list % this is a purely conceptual thing
 
 statement_list
  : statement
@@ -124,7 +124,6 @@ struct parse_tree_visitor;
 
 struct parse_tree_nonterminal {
     enum label {
-        program,
         statement_list,
         statement,
         substatement,
@@ -145,7 +144,6 @@ struct parse_tree_nonterminal {
         return "<" #x ">"
 
         switch (l) {
-            CASE(program);
             CASE(statement_list);
             CASE(statement);
             CASE(substatement);
@@ -205,13 +203,6 @@ struct parse_tree_element {
 
 private:
     std::variant<std::monostate, terminal, nonterminal_> m_content;
-};
-
-struct program : nonterminal {
-    void apply(parse_tree_visitor* visitor) override;
-    parse_tree_nonterminal::label get_label() override {
-        return parse_tree_nonterminal::label::program;
-    }
 };
 
 struct statement_list : nonterminal {
@@ -303,7 +294,6 @@ struct not_statement : nonterminal {  // ~ expression
 struct parse_tree_visitor {
     virtual ~parse_tree_visitor() = default;
 
-    virtual void visit(program* This) {}
     virtual void visit(statement_list* This) {}
     virtual void visit(statement* This) {}
     virtual void visit(substatement* This) {}
@@ -318,7 +308,6 @@ struct parse_tree_visitor {
     virtual void visit(not_statement* This) {}
 };
 
-void program::apply(parse_tree_visitor* visitor) { visitor->visit(this); }
 void statement_list::apply(parse_tree_visitor* visitor) { visitor->visit(this); }
 void statement::apply(parse_tree_visitor* visitor) { visitor->visit(this); }
 void substatement::apply(parse_tree_visitor* visitor) { visitor->visit(this); }
@@ -333,8 +322,7 @@ void parenthesized_expression::apply(parse_tree_visitor* visitor) { visitor->vis
 void not_statement::apply(parse_tree_visitor* visitor) { visitor->visit(this); }
 
 struct printer_visitor : parse_tree_visitor {
-    printer_visitor() { std::cout << "Printing program ...\n"; }
-    void visit(program*) override { std::cout << "\tprogram\n"; }
+    printer_visitor() { std::cout << "Start of program ...\n"; }
     void visit(statement_list*) override { std::cout << "\tstatement_list\n"; }
     void visit(statement*) override { std::cout << "\tstatement\n"; }
     void visit(substatement*) override { std::cout << "\tsubstatement\n"; }
@@ -409,7 +397,6 @@ find_nonterminal_handler(parse_tree_nonterminal::label l, clsc::bes::token_strea
                clsc::bes::token_stream & in [[maybe_unused]])
 
     switch (l) {
-        NONTERMINAL_CASE(program) { stack.emplace_back(std::make_unique<statement_list>()); };
         NONTERMINAL_CASE(statement_list) {
             const auto this_token = in.peek();
             if (this_token == clsc::bes::TOKEN_SEMICOLON) {
@@ -605,7 +592,7 @@ void unwrap_nonterminal(Stack& stack, nonterminal* current, clsc::bes::token_str
 
 void create_ast(clsc::bes::ast::program&, clsc::bes::token_stream& in) {
     std::vector<parse_tree_element> stack;
-    stack.emplace_back(std::make_unique<program>());
+    stack.emplace_back(std::make_unique<statement_list>());
 
     printer_visitor printer;
 
