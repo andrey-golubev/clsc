@@ -32,6 +32,7 @@
 
 #include <initializer_list>
 #include <ostream>
+#include <stdexcept>
 
 namespace clsc {
 namespace bes {
@@ -40,6 +41,9 @@ struct token_stream {
     token_stream(std::initializer_list<annotated_token> list) : m_buf(std::move(list)) {}
 
     token_stream& get(annotated_token& t) {
+        if (!good()) {
+            throw std::runtime_error("Token stream is empty");
+        }
         t = m_buf.front();
         m_buf.erase(m_buf.begin(), m_buf.begin() + 1);
         return *this;
