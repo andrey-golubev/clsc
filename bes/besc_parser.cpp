@@ -626,17 +626,16 @@ void create_ast(clsc::bes::ast::program&, clsc::bes::token_stream& in) {
                 unwrap_nonterminal(stack, x.get(), in);
             }
         );
+
+        // special case: the stack is empty but the token stream is not. it
+        // means we have parsed a single entity of a statement list (a
+        // statement), so we need to carry on
+        if (stack.empty() && in.good()) {
+            stack.emplace_back(std::make_unique<statement_list>());
+        }
     }
 
-    if (in.good()) {
-        std::stringstream ss;
-        while (in.good()) {
-            clsc::bes::annotated_token t;
-            in.get(t);
-            ss << std::string(t) << "\n";
-        }
-        throw_parsing_error("token stream is not empty, some tokens are skipped: " + ss.str());
-    }
+    assert(!in.good() && "the token stream must have been exhausted by the parsing");
 }
 
 }  // namespace
