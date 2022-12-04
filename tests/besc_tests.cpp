@@ -231,6 +231,23 @@ INSTANTIATE_TEST_CASE_P(
         std::make_pair<clsc::bes::token_stream>(
             {annotated(clsc::bes::TOKEN_LITERAL_FALSE), annotated(clsc::bes::TOKEN_SEMICOLON)},
             "false;"
+        ),
+        std::make_pair<clsc::bes::token_stream>(
+            {annotated(clsc::bes::TOKEN_PAREN_LEFT),
+             annotated(clsc::bes::TOKEN_IDENTIFIER),
+             annotated(clsc::bes::TOKEN_PAREN_RIGHT)},
+            "(_1239jxq_1)"
+        ),
+        std::make_pair<clsc::bes::token_stream>(
+            {annotated(clsc::bes::TOKEN_PAREN_LEFT),
+             annotated(clsc::bes::TOKEN_PAREN_LEFT),
+             annotated(clsc::bes::TOKEN_IDENTIFIER),
+             annotated(clsc::bes::TOKEN_PAREN_RIGHT),
+             annotated(clsc::bes::TOKEN_PAREN_RIGHT)},
+            "((x))"
+        ),
+        std::make_pair<clsc::bes::token_stream>(
+            {annotated(clsc::bes::TOKEN_NOT), annotated(clsc::bes::TOKEN_IDENTIFIER)}, "~x"
         )
     ),
     besc_parser_tests::test_name_printer()
