@@ -360,7 +360,7 @@ unexpected_token_error(const clsc::bes::source_location& loc, const clsc::bes::t
 // TODO: once ready, add [[nodiscard]]
 template<size_t N>
 std::array<clsc::bes::annotated_token, N>
-read_sequence(clsc::bes::token_stream in, const clsc::bes::token (&sequence)[N]) {
+read_sequence(clsc::bes::token_stream& in, const clsc::bes::token (&sequence)[N]) {
     std::array<clsc::bes::annotated_token, N> tokens{};
     for (std::size_t i = 0; i < N; ++i) {
         if (!in.good()) {
@@ -377,11 +377,17 @@ read_sequence(clsc::bes::token_stream in, const clsc::bes::token (&sequence)[N])
 }
 
 // returns whether token stream is empty or could be considered as such
-bool consider_empty(clsc::bes::token_stream& in) {
+bool consider_empty(
+    clsc::bes::token_stream& in, std::initializer_list<clsc::bes::token> extra_markers = {}
+) {
     if (!in.good()) {
         return true;
     }
-    return in.peek() == clsc::bes::TOKEN_SEMICOLON;
+    const auto this_token = in.peek();
+    // Note: TOKEN_SEMICOLON is obviously special
+    return this_token == clsc::bes::TOKEN_SEMICOLON ||
+           (std::end(extra_markers) !=
+            std::find(std::begin(extra_markers), std::end(extra_markers), this_token));
 }
 
 template<typename Stack>
@@ -508,7 +514,7 @@ find_nonterminal_handler(parse_tree_nonterminal::label l, clsc::bes::token_strea
             //  | TOKEN_EQ expression
             //  | TOKEN_NEQ expression
             //  | <empty>
-            if (consider_empty(in)) {
+            if (consider_empty(in, {clsc::bes::TOKEN_PAREN_RIGHT})) {
                 return;
             }
 
@@ -613,6 +619,7 @@ void create_ast(clsc::bes::ast::program&, clsc::bes::token_stream& in) {
                 if (!in.good()) {
                     throw_parsing_error("no token in the stream, expected " + std::string(x));
                 }
+
                 clsc::bes::annotated_token t;
                 in.get(t);
                 if (t != x) {
