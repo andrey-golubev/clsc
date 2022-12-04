@@ -77,8 +77,9 @@ private:
 };
 
 struct logical_binary_expression : expression {
-    logical_binary_expression(source_location loc, std::unique_ptr<expression> l,
-                              std::unique_ptr<expression> r)
+    logical_binary_expression(
+        source_location loc, std::unique_ptr<expression> l, std::unique_ptr<expression> r
+    )
         : expression(loc) {
         add(std::move(l));
         add(std::move(r));
@@ -112,8 +113,9 @@ struct eq_expression : logical_binary_expression {};
 struct neq_expression : logical_binary_expression {};
 
 struct assign_expression : expression {
-    assign_expression(source_location loc, std::unique_ptr<identifier_expression> l,
-                      std::unique_ptr<expression> r)
+    assign_expression(
+        source_location loc, std::unique_ptr<identifier_expression> l, std::unique_ptr<expression> r
+    )
         : expression(loc) {
         add(std::move(l));
         add(std::move(r));
@@ -127,8 +129,9 @@ struct assign_expression : expression {
 };
 
 struct alias_expression : expression {
-    alias_expression(source_location loc, std::unique_ptr<identifier_expression> i,
-                     std::string_view lit)
+    alias_expression(
+        source_location loc, std::unique_ptr<identifier_expression> i, std::string_view lit
+    )
         : expression(loc), m_lit(lit) {
         add(std::move(i));
     }

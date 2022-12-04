@@ -37,19 +37,17 @@ namespace clsc {
 namespace bes {
 
 struct parser {
-    parser(token_stream& in, const std::string& raw_program)
-        : m_in(in), m_raw_program(raw_program) {
+    parser(token_stream& in, std::string raw_program)
+        : m_in(in), m_raw_program(std::move(raw_program)) {
         assert(in.good());
-        assert(!raw_program.empty());
+        assert(!m_raw_program.empty());
     }
 
     ast::program parse();
 
 private:
     token_stream& m_in;
-    const std::string& m_raw_program;
-
-    std::unique_ptr<ast::expression> parse_expression();
+    std::string m_raw_program;
 };
 
 }  // namespace bes
