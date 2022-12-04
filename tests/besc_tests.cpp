@@ -209,8 +209,7 @@ struct besc_parser_tests : testing::TestWithParam<std::pair<clsc::bes::token_str
 TEST_P(besc_parser_tests, all) {
     auto param = GetParam();
     auto& tokin = param.first;
-    const auto& raw_program = param.second;
-    clsc::bes::parser parser{tokin, raw_program};
+    clsc::bes::parser parser{tokin, std::move(param.second)};
     parser.parse();
 }
 
@@ -251,4 +250,25 @@ INSTANTIATE_TEST_CASE_P(
         )
     ),
     besc_parser_tests::test_name_printer()
+);
+
+struct besc_lexer_parser_tests : testing::TestWithParam<std::string> {};
+
+TEST_P(besc_lexer_parser_tests, all) {
+    const auto& param = GetParam();
+
+    std::stringstream in_stream;
+    in_stream << param;
+    clsc::bes::token_stream token_stream;
+    clsc::bes::lexer lexer{in_stream, token_stream};
+    lexer.tokenize();
+    ASSERT_FALSE(in_stream.good());
+
+    auto program = param;
+    clsc::bes::parser parser{token_stream, std::move(program)};
+    parser.parse();
+}
+
+INSTANTIATE_TEST_CASE_P(
+    valid_programs, besc_lexer_parser_tests, testing::Values("x || y; y && x;")
 );
