@@ -210,7 +210,7 @@ TEST_P(besc_parser_tests, all) {
     auto param = GetParam();
     auto& tokin = param.first;
     clsc::bes::parser parser{tokin, std::move(param.second)};
-    parser.parse();
+    (void)parser.parse();
 }
 
 INSTANTIATE_TEST_CASE_P(
@@ -266,7 +266,9 @@ TEST_P(besc_lexer_parser_tests, all) {
 
     auto program = param;
     clsc::bes::parser parser{token_stream, std::move(program)};
-    parser.parse();
+    auto ast = parser.parse();
+    // TODO: visit the ast
+    (void)ast;
 }
 
 INSTANTIATE_TEST_CASE_P(

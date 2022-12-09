@@ -43,7 +43,7 @@ struct parser {
         assert(!m_raw_program.empty());
     }
 
-    ast::program parse();
+    [[nodiscard]] ast::program parse();
 
 private:
     token_stream& m_in;
