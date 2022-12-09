@@ -30,12 +30,17 @@
 
 #include "source_location.hpp"
 
+#include <cassert>
 #include <cstddef>
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace clsc {
 namespace bes {
+
+class program_parser;
+
 namespace ast {
 
 struct base_visitor;
@@ -46,24 +51,34 @@ struct expression {
     virtual void apply(base_visitor* visitor) = 0;
 
     source_location loc() { return m_loc; }
-    void add(std::unique_ptr<expression> e) { m_subexprs.push_back(std::move(e)); }
 
 protected:
     source_location m_loc;
+
+private:
+    virtual void add(std::unique_ptr<expression> e) = 0;
+    friend class ::clsc::bes::program_parser;
+};
+
+struct expression_list : expression {
+    expression_list(source_location loc) : expression(loc) {}
+    inline void apply(base_visitor* visitor) override;
+
+protected:
     std::vector<std::unique_ptr<expression>> m_subexprs;
+
+private:
+    void add(std::unique_ptr<expression> e) override { m_subexprs.push_back(std::move(e)); }
 };
 
 struct program {
     inline void apply(base_visitor* visitor);
-    void add(std::unique_ptr<expression> e) { m_exprs.push_back(std::move(e)); }
+    program(source_location loc) : m_all(std::make_unique<expression_list>(loc)) {}
 
 private:
-    std::vector<std::unique_ptr<expression>> m_exprs;
-};
+    std::unique_ptr<expression_list> m_all;
 
-struct semicolon_expression : expression {
-    semicolon_expression(source_location loc) : expression(loc) {}
-    inline void apply(base_visitor*) override;
+    friend class ::clsc::bes::program_parser;
 };
 
 struct identifier_expression : expression {
@@ -74,96 +89,210 @@ struct identifier_expression : expression {
 
 private:
     std::string_view m_name;
+
+    void add(std::unique_ptr<expression> e) override {
+        assert(false && "unexpected call to add()");
+    }
 };
 
 struct logical_binary_expression : expression {
-    logical_binary_expression(
-        source_location loc, std::unique_ptr<expression> l, std::unique_ptr<expression> r
-    )
-        : expression(loc) {
-        add(std::move(l));
-        add(std::move(r));
-    }
+    logical_binary_expression(source_location loc) : expression(loc) {}
     inline void apply(base_visitor* visitor) override;
 
-    const expression* left() const { return m_subexprs[0].get(); }
-    const expression* right() const { return m_subexprs[1].get(); }
+    enum expr_kind {
+        none,
+        or_expr,
+        and_expr,
+        xor_expr,
+        arrow_right_expr,
+        arrow_left_expr,
+        eq_expr,
+        neq_expr,
+    };
+
+    const expression* left() const { return m_left.get(); }
+    const expression* right() const { return m_right.get(); }
+    expr_kind kind() const { return m_kind; }
+
+private:
+    std::unique_ptr<expression> m_left;
+    std::unique_ptr<expression> m_right;
+    expr_kind m_kind{none};
+
+    void add(std::unique_ptr<expression> e) override {
+        // TODO: this is a *very* special case (probably needs some other
+        // handling)
+        if (m_kind == none) {
+            auto kind = determine_synthetic_kind(e.get());
+            if (kind != none) {
+                m_kind = kind;
+                return;
+            }
+        }
+
+        assert(!m_left || !m_right);
+        if (!m_left) {
+            m_left = std::move(e);
+            return;
+        }
+        m_right = std::move(e);
+    }
+
+    inline static expr_kind determine_synthetic_kind(expression* e);
+    friend class ::clsc::bes::program_parser;
 };
 
-struct or_expression : logical_binary_expression {};
+// synthetic expressions:
+struct or_expression : logical_binary_expression {
+    or_expression() : logical_binary_expression({}) {}
+};
 
-struct and_expression : logical_binary_expression {};
+struct and_expression : logical_binary_expression {
+    and_expression() : logical_binary_expression({}) {}
+};
+
+struct xor_expression : logical_binary_expression {
+    xor_expression() : logical_binary_expression({}) {}
+};
+
+struct arrow_right_expression : logical_binary_expression {
+    arrow_right_expression() : logical_binary_expression({}) {}
+};
+
+struct arrow_left_expression : logical_binary_expression {
+    arrow_left_expression() : logical_binary_expression({}) {}
+};
+
+struct eq_expression : logical_binary_expression {
+    eq_expression() : logical_binary_expression({}) {}
+};
+
+struct neq_expression : logical_binary_expression {
+    neq_expression() : logical_binary_expression({}) {}
+};
+
+inline logical_binary_expression::expr_kind
+logical_binary_expression::determine_synthetic_kind(expression* e) {
+    // poor man's way to determine the expression kind
+    if (dynamic_cast<or_expression*>(e))
+        return logical_binary_expression::or_expr;
+    if (dynamic_cast<and_expression*>(e))
+        return logical_binary_expression::and_expr;
+    if (dynamic_cast<xor_expression*>(e))
+        return logical_binary_expression::xor_expr;
+    if (dynamic_cast<arrow_right_expression*>(e))
+        return logical_binary_expression::arrow_right_expr;
+    if (dynamic_cast<arrow_left_expression*>(e))
+        return logical_binary_expression::arrow_left_expr;
+    if (dynamic_cast<eq_expression*>(e))
+        return logical_binary_expression::eq_expr;
+    if (dynamic_cast<neq_expression*>(e))
+        return logical_binary_expression::neq_expr;
+
+    return logical_binary_expression::none;
+}
 
 struct not_expression : expression {
-    not_expression(source_location loc, std::unique_ptr<expression> e) : expression(loc) {
-        add(std::move(e));
-    }
+    not_expression(source_location loc) : expression(loc) {}
     inline void apply(base_visitor* visitor) override;
-    const expression* expr() const { return m_subexprs[0].get(); }
+
+    const expression* expr() const { return m_expr.get(); }
+
+private:
+    std::unique_ptr<expression> m_expr;
+
+    void add(std::unique_ptr<expression> e) override {
+        assert(!m_expr);
+        m_expr = std::move(e);
+    }
 };
 
-struct xor_expression : logical_binary_expression {};
-
-struct arrow_right_expression : logical_binary_expression {};
-
-struct arrow_left_expression : logical_binary_expression {};
-
-struct eq_expression : logical_binary_expression {};
-
-struct neq_expression : logical_binary_expression {};
-
 struct assign_expression : expression {
-    assign_expression(
-        source_location loc, std::unique_ptr<identifier_expression> l, std::unique_ptr<expression> r
-    )
-        : expression(loc) {
-        add(std::move(l));
-        add(std::move(r));
-    }
+    assign_expression(source_location loc, std::unique_ptr<identifier_expression> i)
+        : expression(loc), m_identifier(std::move(i)) {}
     inline void apply(base_visitor* visitor) override;
 
     const identifier_expression* identifier() const {
-        return static_cast<identifier_expression*>(m_subexprs[0].get());
+        return static_cast<identifier_expression*>(m_identifier.get());
     }
-    const expression* right() const { return m_subexprs[1].get(); }
+    const expression* value() const { return m_value.get(); }
+
+private:
+    std::unique_ptr<identifier_expression> m_identifier;
+    std::unique_ptr<expression> m_value;
+
+    void add(std::unique_ptr<expression> e) override {
+        assert(!m_value);
+        m_value = std::move(e);
+    }
 };
 
 struct alias_expression : expression {
     alias_expression(
         source_location loc, std::unique_ptr<identifier_expression> i, std::string_view lit
     )
-        : expression(loc), m_lit(lit) {
-        add(std::move(i));
-    }
+        : expression(loc), m_identifier(std::move(i)), m_lit(lit) {}
     inline void apply(base_visitor* visitor) override;
 
     const identifier_expression* identifier() const {
-        return static_cast<identifier_expression*>(m_subexprs[0].get());
+        return static_cast<identifier_expression*>(m_identifier.get());
     }
     std::string_view literal() const { return m_lit; }
 
 private:
+    std::unique_ptr<identifier_expression> m_identifier;
     std::string_view m_lit{};
+
+    void add(std::unique_ptr<expression> e) override {
+        assert(false && "unexpected call to add()");
+    }
 };
 
 struct var_expression : expression {
     var_expression(source_location loc, std::unique_ptr<identifier_expression> i)
-        : expression(loc) {
-        add(std::move(i));
-    }
+        : expression(loc), m_identifier(std::move(i)) {}
     inline void apply(base_visitor* visitor) override;
 
     const identifier_expression* identifier() const {
-        return static_cast<identifier_expression*>(m_subexprs[0].get());
+        return static_cast<identifier_expression*>(m_identifier.get());
+    }
+
+private:
+    std::unique_ptr<identifier_expression> m_identifier;
+
+    void add(std::unique_ptr<expression> e) override {
+        assert(false && "unexpected call to add()");
     }
 };
 
 struct eval_expression : expression {
-    eval_expression(source_location loc, std::unique_ptr<expression> e) : expression(loc) {
-        add(std::move(e));
-    }
+    eval_expression(source_location loc) : expression(loc) {}
     inline void apply(base_visitor* visitor) override;
-    const expression* expr() const { return m_subexprs[0].get(); }
+
+    const expression* expr() const { return m_expr.get(); }
+
+private:
+    std::unique_ptr<expression> m_expr;
+
+    void add(std::unique_ptr<expression> e) override {
+        assert(!m_expr);
+        m_expr = std::move(e);
+    }
+};
+
+struct parenthesized_expression : expression {
+    parenthesized_expression(source_location loc) : expression(loc) {}
+    inline void apply(base_visitor* visitor) override;
+
+    const expression* expr() const { return m_expr.get(); }
+
+private:
+    std::unique_ptr<expression> m_expr;
+
+    void add(std::unique_ptr<expression> e) override {
+        assert(!m_expr);
+        m_expr = std::move(e);
+    }
 };
 
 struct bool_literal_expression : expression {
@@ -173,6 +302,10 @@ struct bool_literal_expression : expression {
 
 private:
     bool m_value = false;
+
+    void add(std::unique_ptr<expression> e) override {
+        assert(false && "unexpected call to add()");
+    }
 };
 
 struct base_visitor {
@@ -180,8 +313,8 @@ struct base_visitor {
 
     virtual bool visit(program*) { return true; }
     virtual void postVisit(program*) {}
-    virtual bool visit(semicolon_expression*) { return true; }
-    virtual void postVisit(semicolon_expression*) {}
+    virtual bool visit(expression_list*) { return true; }
+    virtual void postVisit(expression_list*) {}
     virtual bool visit(identifier_expression*) { return true; }
     virtual void postVisit(identifier_expression*) {}
     virtual bool visit(logical_binary_expression*) { return true; }
@@ -210,18 +343,25 @@ struct base_visitor {
     virtual void postVisit(var_expression*) {}
     virtual bool visit(eval_expression*) { return true; }
     virtual void postVisit(eval_expression*) {}
+    virtual bool visit(parenthesized_expression*) { return true; }
+    virtual void postVisit(parenthesized_expression*) {}
     virtual bool visit(bool_literal_expression*) { return true; }
     virtual void postVisit(bool_literal_expression*) {}
 };
 
 inline void program::apply(base_visitor* visitor) {
-    if (visitor->visit(this))
+    if (visitor->visit(this)) {
+        assert(m_all);
+        m_all->apply(visitor);
         visitor->postVisit(this);
+    }
 }
 
-inline void semicolon_expression::apply(base_visitor* visitor) {
-    if (visitor->visit(this))
-        visitor->postVisit(this);
+inline void expression_list::apply(base_visitor* visitor) {
+    for (const auto& expr : m_subexprs) {
+        assert(expr);
+        expr->apply(visitor);
+    }
 }
 
 inline void identifier_expression::apply(base_visitor* visitor) {
@@ -230,33 +370,63 @@ inline void identifier_expression::apply(base_visitor* visitor) {
 }
 
 inline void logical_binary_expression::apply(base_visitor* visitor) {
-    if (visitor->visit(this))
+    if (visitor->visit(this)) {
+        assert(m_left);
+        assert(m_right);
+        m_left->apply(visitor);
+        m_right->apply(visitor);
         visitor->postVisit(this);
+    }
 }
 
 inline void not_expression::apply(base_visitor* visitor) {
-    if (visitor->visit(this))
+    if (visitor->visit(this)) {
+        assert(m_expr);
+        m_expr->apply(visitor);
         visitor->postVisit(this);
+    }
 }
 
 inline void assign_expression::apply(base_visitor* visitor) {
-    if (visitor->visit(this))
+    if (visitor->visit(this)) {
+        assert(m_identifier);
+        assert(m_value);
+        m_identifier->apply(visitor);
+        m_value->apply(visitor);
         visitor->postVisit(this);
+    }
 }
 
 inline void alias_expression::apply(base_visitor* visitor) {
-    if (visitor->visit(this))
+    if (visitor->visit(this)) {
+        assert(m_identifier);
+        m_identifier->apply(visitor);
         visitor->postVisit(this);
+    }
 }
 
 inline void var_expression::apply(base_visitor* visitor) {
-    if (visitor->visit(this))
+    if (visitor->visit(this)) {
+        assert(m_identifier);
+        m_identifier->apply(visitor);
         visitor->postVisit(this);
+    }
 }
 
 inline void eval_expression::apply(base_visitor* visitor) {
-    if (visitor->visit(this))
+    if (visitor->visit(this)) {
+        assert(m_expr);
+        m_expr->apply(visitor);
         visitor->postVisit(this);
+    }
+}
+
+inline void parenthesized_expression::apply(base_visitor* visitor) {
+    if (visitor->visit(this)) {
+        assert(m_expr);
+        m_expr->apply(visitor);
+        visitor->postVisit(this);
+    }
 }
 
 inline void bool_literal_expression::apply(base_visitor* visitor) {
