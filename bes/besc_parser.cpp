@@ -476,15 +476,11 @@ class program_parser {
 
     // TODO: remove this in favor of a general solution
     static void relink_children(ast::logical_binary_expression* src, ast::expression* dst) {
+        assert(!src->m_right);  // otherwise it is indeed a binary expression!
         if (!src->m_left) {
-            // nothing to relink
-            assert(!src->m_right);
             return;
         }
-        dst->add(std::exchange(src->m_left, nullptr));
-        if (src->m_right) {
-            dst->add(std::exchange(src->m_right, nullptr));
-        }
+        dst->replace(src, std::move(src->m_left));
     }
 
     // TODO: the below types should really be hidden inside the ast_creator
@@ -542,19 +538,24 @@ class program_parser {
         expression_stack_element shrink_ast(shrink_policy policy = just_shrink) {
             assert(!m_parser.m_expression_stack.empty());
             auto element = pop(m_parser.m_expression_stack);
-            if (policy == drop_sentinel) {
-                assert(!m_parse_tree_stack.empty());
-                assert(m_parse_tree_stack.back().template holds_alternative<shrink_sentinel>());
-                m_parse_tree_stack.pop_back();
-
-                // relink popped element's children to the new stack head
-                auto binary_expr = fast_cast<ast::logical_binary_expression*>(element.content);
-                assert(!m_parser.m_expression_stack.empty());
-                program_parser::relink_children(
-                    binary_expr, m_parser.m_expression_stack.back().content
-                );
+            if (policy == just_shrink) {
+                return element;
             }
-            return element;
+
+            assert(policy == drop_sentinel);  // special
+            assert(!m_parse_tree_stack.empty());
+            assert(m_parse_tree_stack.back().template holds_alternative<shrink_sentinel>());
+            m_parse_tree_stack.pop_back();
+
+            // relink popped element's children to the new stack head
+            auto binary_expr = fast_cast<ast::logical_binary_expression*>(element.content);
+            assert(!m_parser.m_expression_stack.empty());
+            program_parser::relink_children(
+                binary_expr, m_parser.m_expression_stack.back().content
+            );
+            // note: due to the nature of this whole operation, we could no
+            // longer use the popped element
+            return {nullptr};
         }
     };
     template<typename Stack> ast_creator(Stack) -> ast_creator<Stack>;
@@ -741,8 +742,7 @@ class program_parser {
                     // expression onto the ast stack. that expression is not in
                     // fact valid in this particular case, so we must drop it
                     auto element = ast_creator(stack, parser).shrink_ast(drop_sentinel);
-                    // ensure that the element is indeed the inserted one
-                    assert(dynamic_cast<ast::logical_binary_expression*>(element.content));
+                    assert(element.content == nullptr);
                     return;
                 }
 

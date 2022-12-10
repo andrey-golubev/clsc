@@ -30,6 +30,7 @@
 
 #include "source_location.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <memory>
@@ -57,6 +58,9 @@ protected:
 
 private:
     virtual void add(std::unique_ptr<expression> e) = 0;
+    // TODO: replace is *only* needed to relink binary expr's left child to its
+    // binary expr's parent
+    virtual void replace(const expression* const x, std::unique_ptr<expression> y) = 0;
     friend class ::clsc::bes::program_parser;
 };
 
@@ -69,6 +73,17 @@ protected:
 
 private:
     void add(std::unique_ptr<expression> e) override { m_subexprs.push_back(std::move(e)); }
+
+    void replace(const expression* const x, std::unique_ptr<expression> y) override {
+        auto old_it = std::find_if(
+            m_subexprs.begin(),
+            m_subexprs.end(),
+            [&](const std::unique_ptr<expression>& e) { return e.get() == x; }
+        );
+        assert(old_it != m_subexprs.end());
+        using std::swap;
+        swap(*old_it, y);
+    }
 };
 
 struct program {
@@ -90,8 +105,10 @@ struct identifier_expression : expression {
 private:
     std::string_view m_name;
 
-    void add(std::unique_ptr<expression> e) override {
-        assert(false && "unexpected call to add()");
+    void add(std::unique_ptr<expression>) override { assert(false && "unexpected call to add()"); }
+
+    void replace(const expression* const, std::unique_ptr<expression>) override {
+        assert(false && "unexpected call to replace()");
     }
 };
 
@@ -136,6 +153,16 @@ private:
             return;
         }
         m_right = std::move(e);
+    }
+
+    void replace(const expression* const x, std::unique_ptr<expression> y) override {
+        using std::swap;
+        assert(m_left.get() == x || m_right.get() == x);
+        if (m_left.get() == x) {
+            swap(m_left, y);
+            return;
+        }
+        swap(m_right, y);
     }
 
     inline static expr_kind determine_synthetic_kind(expression* e);
@@ -205,6 +232,12 @@ private:
         assert(!m_expr);
         m_expr = std::move(e);
     }
+
+    void replace(const expression* const x, std::unique_ptr<expression> y) override {
+        assert(m_expr.get() == x);
+        using std::swap;
+        swap(m_expr, y);
+    }
 };
 
 struct assign_expression : expression {
@@ -225,6 +258,12 @@ private:
         assert(!m_value);
         m_value = std::move(e);
     }
+
+    void replace(const expression* const x, std::unique_ptr<expression> y) override {
+        assert(m_value.get() == x);
+        using std::swap;
+        swap(m_value, y);
+    }
 };
 
 struct alias_expression : expression {
@@ -243,8 +282,10 @@ private:
     std::unique_ptr<identifier_expression> m_identifier;
     std::string_view m_lit{};
 
-    void add(std::unique_ptr<expression> e) override {
-        assert(false && "unexpected call to add()");
+    void add(std::unique_ptr<expression>) override { assert(false && "unexpected call to add()"); }
+
+    void replace(const expression* const, std::unique_ptr<expression>) override {
+        assert(false && "unexpected call to replace()");
     }
 };
 
@@ -260,8 +301,10 @@ struct var_expression : expression {
 private:
     std::unique_ptr<identifier_expression> m_identifier;
 
-    void add(std::unique_ptr<expression> e) override {
-        assert(false && "unexpected call to add()");
+    void add(std::unique_ptr<expression>) override { assert(false && "unexpected call to add()"); }
+
+    void replace(const expression* const, std::unique_ptr<expression>) override {
+        assert(false && "unexpected call to replace()");
     }
 };
 
@@ -278,6 +321,12 @@ private:
         assert(!m_expr);
         m_expr = std::move(e);
     }
+
+    void replace(const expression* const x, std::unique_ptr<expression> y) override {
+        assert(m_expr.get() == x);
+        using std::swap;
+        swap(m_expr, y);
+    }
 };
 
 struct parenthesized_expression : expression {
@@ -293,6 +342,12 @@ private:
         assert(!m_expr);
         m_expr = std::move(e);
     }
+
+    void replace(const expression* const x, std::unique_ptr<expression> y) override {
+        assert(m_expr.get() == x);
+        using std::swap;
+        swap(m_expr, y);
+    }
 };
 
 struct bool_literal_expression : expression {
@@ -305,6 +360,10 @@ private:
 
     void add(std::unique_ptr<expression> e) override {
         assert(false && "unexpected call to add()");
+    }
+
+    void replace(const expression* const, std::unique_ptr<expression>) override {
+        assert(false && "unexpected call to replace()");
     }
 };
 
