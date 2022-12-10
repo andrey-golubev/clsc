@@ -170,52 +170,50 @@ private:
 };
 
 // synthetic expressions:
-struct or_expression : logical_binary_expression {
-    or_expression() : logical_binary_expression({}) {}
-};
+struct synthetic_expression : expression {
+    synthetic_expression() : expression({}) {}
+    void apply(base_visitor*) override {
+        assert(false && "synthetic expression couldn't be visited");
+    }
 
-struct and_expression : logical_binary_expression {
-    and_expression() : logical_binary_expression({}) {}
+private:
+    void add(std::unique_ptr<expression>) override {
+        assert(false && "synthetic expression couldn't be part of the tree");
+    }
+    void replace(const expression* const, std::unique_ptr<expression>) override {
+        assert(false && "synthetic expression couldn't be part of the tree");
+    }
 };
-
-struct xor_expression : logical_binary_expression {
-    xor_expression() : logical_binary_expression({}) {}
-};
-
-struct arrow_right_expression : logical_binary_expression {
-    arrow_right_expression() : logical_binary_expression({}) {}
-};
-
-struct arrow_left_expression : logical_binary_expression {
-    arrow_left_expression() : logical_binary_expression({}) {}
-};
-
-struct eq_expression : logical_binary_expression {
-    eq_expression() : logical_binary_expression({}) {}
-};
-
-struct neq_expression : logical_binary_expression {
-    neq_expression() : logical_binary_expression({}) {}
-};
+struct or_synthetic : synthetic_expression {};
+struct and_synthetic : synthetic_expression {};
+struct xor_synthetic : synthetic_expression {};
+struct arrow_right_synthetic : synthetic_expression {};
+struct arrow_left_synthetic : synthetic_expression {};
+struct eq_synthetic : synthetic_expression {};
+struct neq_synthetic : synthetic_expression {};
 
 inline logical_binary_expression::expr_kind
 logical_binary_expression::determine_synthetic_kind(expression* e) {
+    if (!dynamic_cast<synthetic_expression*>(e))  // fast-ish check for inapplicability
+        return logical_binary_expression::none;
+
     // poor man's way to determine the expression kind
-    if (dynamic_cast<or_expression*>(e))
+    if (dynamic_cast<or_synthetic*>(e))
         return logical_binary_expression::or_expr;
-    if (dynamic_cast<and_expression*>(e))
+    if (dynamic_cast<and_synthetic*>(e))
         return logical_binary_expression::and_expr;
-    if (dynamic_cast<xor_expression*>(e))
+    if (dynamic_cast<xor_synthetic*>(e))
         return logical_binary_expression::xor_expr;
-    if (dynamic_cast<arrow_right_expression*>(e))
+    if (dynamic_cast<arrow_right_synthetic*>(e))
         return logical_binary_expression::arrow_right_expr;
-    if (dynamic_cast<arrow_left_expression*>(e))
+    if (dynamic_cast<arrow_left_synthetic*>(e))
         return logical_binary_expression::arrow_left_expr;
-    if (dynamic_cast<eq_expression*>(e))
+    if (dynamic_cast<eq_synthetic*>(e))
         return logical_binary_expression::eq_expr;
-    if (dynamic_cast<neq_expression*>(e))
+    if (dynamic_cast<neq_synthetic*>(e))
         return logical_binary_expression::neq_expr;
 
+    assert(false && "unreachable due to verification at the very beginning");
     return logical_binary_expression::none;
 }
 
@@ -378,22 +376,8 @@ struct base_visitor {
     virtual void postVisit(identifier_expression*) {}
     virtual bool visit(logical_binary_expression*) { return true; }
     virtual void postVisit(logical_binary_expression*) {}
-    virtual bool visit(or_expression*) { return true; }
-    virtual void postVisit(or_expression*) {}
-    virtual bool visit(and_expression*) { return true; }
-    virtual void postVisit(and_expression*) {}
     virtual bool visit(not_expression*) { return true; }
     virtual void postVisit(not_expression*) {}
-    virtual bool visit(xor_expression*) { return true; }
-    virtual void postVisit(xor_expression*) {}
-    virtual bool visit(arrow_right_expression*) { return true; }
-    virtual void postVisit(arrow_right_expression*) {}
-    virtual bool visit(arrow_left_expression*) { return true; }
-    virtual void postVisit(arrow_left_expression*) {}
-    virtual bool visit(eq_expression*) { return true; }
-    virtual void postVisit(eq_expression*) {}
-    virtual bool visit(neq_expression*) { return true; }
-    virtual void postVisit(neq_expression*) {}
     virtual bool visit(assign_expression*) { return true; }
     virtual void postVisit(assign_expression*) {}
     virtual bool visit(alias_expression*) { return true; }
