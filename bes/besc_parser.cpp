@@ -779,19 +779,19 @@ class program_parser {
                 // ast:
                 auto synthetic_expr = [&]() -> std::unique_ptr<ast::expression> {
                     if (expr_token == clsc::bes::TOKEN_NEQ)
-                        return std::make_unique<ast::neq_expression>();
+                        return std::make_unique<ast::neq_synthetic>();
                     if (expr_token == clsc::bes::TOKEN_EQ)
-                        return std::make_unique<ast::eq_expression>();
+                        return std::make_unique<ast::eq_synthetic>();
                     if (expr_token == clsc::bes::TOKEN_ARROW_LEFT)
-                        return std::make_unique<ast::arrow_left_expression>();
+                        return std::make_unique<ast::arrow_left_synthetic>();
                     if (expr_token == clsc::bes::TOKEN_ARROW_RIGHT)
-                        return std::make_unique<ast::arrow_right_expression>();
+                        return std::make_unique<ast::arrow_right_synthetic>();
                     if (expr_token == clsc::bes::TOKEN_XOR)
-                        return std::make_unique<ast::xor_expression>();
+                        return std::make_unique<ast::xor_synthetic>();
                     if (expr_token == clsc::bes::TOKEN_AND)
-                        return std::make_unique<ast::and_expression>();
+                        return std::make_unique<ast::and_synthetic>();
                     if (expr_token == clsc::bes::TOKEN_OR)
-                        return std::make_unique<ast::or_expression>();
+                        return std::make_unique<ast::or_synthetic>();
 
                     assert(false && "unreachable due to verification step above");
                     return nullptr;
