@@ -272,5 +272,35 @@ TEST_P(besc_lexer_parser_tests, all) {
 }
 
 INSTANTIATE_TEST_CASE_P(
-    valid_programs, besc_lexer_parser_tests, testing::Values("x || y; y && x;")
+    valid_programs,
+    besc_lexer_parser_tests,
+    testing::Values(
+        R"(
+        x || y;
+        y && x;
+        x ^ y;
+        x -> y;
+        x <- y;
+        x == y;
+        x != y;
+        ~x;)",
+
+        "(x || y) && x;",
+        "eval x && y;",
+        "var My_veryBest_var;",
+        "x = true",
+        "symbol long_expr = \"foo && (bar || baz)\";",
+
+        // multi-line and complicated
+        R"(symbol long_expr = "foo && (bar || baz) ";
+        var x;
+        x = long_expr || y;)",
+
+        // parentheses and negation
+        "(~x)",
+        "~(x)",
+        "~((~x))",
+        "(~((y || x) && (~x)) || s0me_we1rd_th1ngy);",
+        "(~y || x)"
+    )
 );
