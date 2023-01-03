@@ -84,7 +84,6 @@ statement
 
 substatement
  : expression substatement_expression % possible binary expression
- | not_statement
  | <empty>
 
 eval_statement : TOKEN_EVAL substatement
@@ -98,6 +97,7 @@ alias_statement : TOKEN_ALIAS TOKEN_IDENTIFIER TOKEN_ASSIGN TOKEN_LITERAL_STRING
 
 expression
  : parenthesized_expression
+ | not_expression
  | TOKEN_LITERAL_FALSE
  | TOKEN_LITERAL_TRUE
  | TOKEN_IDENTIFIER
@@ -115,7 +115,7 @@ substatement_expression
  | TOKEN_NEQ expression
  | <empty>
 
-not_statement : TOKEN_NOT expression
+not_expression : TOKEN_NOT expression
 
  */
 
@@ -135,7 +135,7 @@ struct parse_tree_nonterminal {
         substatement_expression,
         expression,
         parenthesized_expression,
-        not_statement,
+        not_expression,
     };
 
     static std::string stringify(label l) {
@@ -154,7 +154,7 @@ struct parse_tree_nonterminal {
             CASE(substatement_expression);
             CASE(expression);
             CASE(parenthesized_expression);
-            CASE(not_statement);
+            CASE(not_expression);
         }
 #undef CASE
 
@@ -279,10 +279,10 @@ struct parenthesized_expression : nonterminal {  // ( substatement )
     }
 };
 
-struct not_statement : nonterminal {  // ~ expression
+struct not_expression : nonterminal {  // ~ expression
     void apply(parse_tree_visitor* visitor) override;
     parse_tree_nonterminal::label get_label() override {
-        return parse_tree_nonterminal::label::not_statement;
+        return parse_tree_nonterminal::label::not_expression;
     }
 };
 
@@ -299,7 +299,7 @@ struct parse_tree_visitor {
     virtual void visit(substatement_expression* This) {}
     virtual void visit(expression* This) {}
     virtual void visit(parenthesized_expression* This) {}
-    virtual void visit(not_statement* This) {}
+    virtual void visit(not_expression* This) {}
 };
 
 void statement_list::apply(parse_tree_visitor* visitor) { visitor->visit(this); }
@@ -312,7 +312,7 @@ void alias_statement::apply(parse_tree_visitor* visitor) { visitor->visit(this);
 void substatement_expression::apply(parse_tree_visitor* visitor) { visitor->visit(this); }
 void expression::apply(parse_tree_visitor* visitor) { visitor->visit(this); }
 void parenthesized_expression::apply(parse_tree_visitor* visitor) { visitor->visit(this); }
-void not_statement::apply(parse_tree_visitor* visitor) { visitor->visit(this); }
+void not_expression::apply(parse_tree_visitor* visitor) { visitor->visit(this); }
 
 struct printer_visitor : parse_tree_visitor {
     printer_visitor() { std::cout << "Start of program ...\n"; }
@@ -326,7 +326,7 @@ struct printer_visitor : parse_tree_visitor {
     void visit(substatement_expression*) override { std::cout << "\tsubstatement_expression\n"; }
     void visit(expression*) override { std::cout << "\texpression\n"; }
     void visit(parenthesized_expression*) override { std::cout << "\tparenthesized_expression\n"; }
-    void visit(not_statement*) override { std::cout << "\tnot_statement\n"; }
+    void visit(not_expression*) override { std::cout << "\not_expression\n"; }
     ~printer_visitor() { std::cout << "... End of program\n"; }
 };
 
@@ -565,8 +565,7 @@ class program_parser {
     }
 
     template<typename Stack>
-    using nonterminal_handler =
-        void (*)(program_parser*, Stack&, nonterminal*, clsc::bes::token_stream&);
+    using nonterminal_handler = void (*)(program_parser*, Stack&, clsc::bes::token_stream&);
     template<typename Stack>
     nonterminal_handler<Stack>
     find_nonterminal_handler(parse_tree_nonterminal::label l, clsc::bes::token_stream& in) {
@@ -575,7 +574,6 @@ class program_parser {
         return                                                                                     \
             [](program_parser * parser [[maybe_unused]],                                           \
                Stack & stack [[maybe_unused]],                                                     \
-               nonterminal * This [[maybe_unused]],                                                \
                clsc::bes::token_stream & in [[maybe_unused]])
 
         switch (l) {
@@ -682,21 +680,18 @@ class program_parser {
                     return;
                 }
 
-                if (in.peek() == clsc::bes::TOKEN_NOT) {
-                    stack.emplace_back(std::make_unique<not_statement>());
-                } else {
-                    stack.emplace_back(std::make_unique<expression>());
-                    stack.emplace_back(std::make_unique<substatement_expression>());
+                stack.emplace_back(std::make_unique<expression>());
+                stack.emplace_back(std::make_unique<substatement_expression>());
 
-                    // ast:
-                    auto loc = in.peek().loc;
-                    auto maybe_binary_expr = std::make_unique<ast::logical_binary_expression>(loc);
-                    ast_creator(stack, parser).grow_ast(std::move(maybe_binary_expr));
-                }
+                // ast:
+                auto loc = in.peek().loc;
+                auto maybe_binary_expr = std::make_unique<ast::logical_binary_expression>(loc);
+                ast_creator(stack, parser).grow_ast(std::move(maybe_binary_expr));
             };
             NONTERMINAL_CASE(expression) {
                 // expression
                 //  : parenthesized_expression  - fallback
+                //  | not_expression
                 //  | TOKEN_LITERAL_FALSE
                 //  | TOKEN_LITERAL_TRUE
                 //  | TOKEN_IDENTIFIER
@@ -722,6 +717,8 @@ class program_parser {
                         single_token.loc, single_token == clsc::bes::TOKEN_LITERAL_TRUE
                     );
                     ast_creator(stack, parser).amend_ast_head(std::move(bool_expr));
+                } else if (this_token == clsc::bes::TOKEN_NOT) {
+                    stack.emplace_back(std::make_unique<not_expression>());
                 } else {
                     // fallback
                     stack.emplace_back(std::make_unique<parenthesized_expression>());
@@ -809,7 +806,7 @@ class program_parser {
                     std::make_unique<ast::parenthesized_expression>(left_paren_token.loc);
                 ast_creator(stack, parser).grow_ast(std::move(paren_expr));
             };
-            NONTERMINAL_CASE(not_statement) {
+            NONTERMINAL_CASE(not_expression) {
                 const auto valid = read_sequence(in, {clsc::bes::TOKEN_NOT});
                 stack.emplace_back(std::make_unique<expression>());
 
@@ -830,7 +827,7 @@ class program_parser {
         // ensure that the stack is correctly pushed
         reverse_order_push adaptor(stack);
         auto unwrap = find_nonterminal_handler<reverse_order_push<Stack>>(current->get_label(), in);
-        unwrap(this, adaptor, current, m_in);
+        unwrap(this, adaptor, m_in);
     }
 
 public:
