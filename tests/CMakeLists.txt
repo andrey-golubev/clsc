@@ -40,6 +40,7 @@ add_executable(${PROJECT_NAME}
     algorithm_tests.cpp
     fibonacci_tests.cpp
     besc_tests.cpp
+    type_algorithm_tests.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
