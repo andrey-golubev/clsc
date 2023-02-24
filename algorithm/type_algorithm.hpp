@@ -62,4 +62,10 @@ template<template<typename U> typename UnaryPred, typename T, typename... Ts> st
     static constexpr bool value = !any_of<UnaryPred, T, Ts...>::value;
 };
 
+/*! \brief Converts \a Pred predicate into a unary predicate by binding first
+           \c{N - 1} types of \a Us to \a Ts.
+*/
+template<template<typename... Us> typename Pred, typename... Ts> struct bind_to_unary {
+    template<typename T> using type = Pred<Ts..., T>;
+};
 }  // namespace clsc
