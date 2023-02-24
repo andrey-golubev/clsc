@@ -57,3 +57,18 @@ TEST(type_algorithm_tests, none_of) {
     static_assert(!clsc::none_of<std::is_function, int, decltype(foofunc)>::value);
     static_assert(!clsc::none_of<std::is_fundamental, decltype(nullptr)>::value);
 }
+
+class Base {};
+class Derived : Base {};
+template<typename T, typename U, typename X> struct three_way_base_of {
+    static constexpr bool value = std::is_base_of_v<T, U> && std::is_base_of_v<U, X>;
+};
+
+TEST(type_algorithm_tests, bind_to_unary) {
+    static_assert(clsc::bind_to_unary<std::is_same, float>::type<float>::value);
+    static_assert(!clsc::bind_to_unary<std::is_convertible, float>::type<float*>::value);
+    class DerivedDerived : Derived {};
+    static_assert(
+        clsc::bind_to_unary<three_way_base_of, Base, Derived>::type<DerivedDerived>::value);
+    static_assert(clsc::any_of<clsc::bind_to_unary<std::is_same, int>::type, int, double>::value);
+}
