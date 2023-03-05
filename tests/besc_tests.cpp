@@ -349,11 +349,11 @@ struct besc_lexer_parser_tests : testing::TestWithParam<std::string> {
         }
 
         bool visit(clsc::bes::ast::var_expression* ve) override {
-            *this << "var(" << ve->loc() << "): \n";
+            *this << "var(" << ve->loc() << "): {\n";
             m_indentation++;
             return true;
         }
-        void postVisit(clsc::bes::ast::var_expression*) override { common_post_visit(""); }
+        void postVisit(clsc::bes::ast::var_expression*) override { common_post_visit(); }
 
         bool visit(clsc::bes::ast::eval_expression* ee) override {
             *this << "eval(" << ee->loc() << ") [\n";
