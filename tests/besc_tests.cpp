@@ -31,7 +31,10 @@
 #include <besc_lexer.hpp>
 #include <cctype>
 #include <gtest/gtest-param-test.h>
+#include <ios>
+#include <ostream>
 #include <string>
+#include <sys/socket.h>
 #include <token_stream.hpp>
 #include <unordered_map>
 
@@ -252,7 +255,126 @@ INSTANTIATE_TEST_CASE_P(
     besc_parser_tests::test_name_printer()
 );
 
-struct besc_lexer_parser_tests : testing::TestWithParam<std::string> {};
+struct besc_lexer_parser_tests : testing::TestWithParam<std::string> {
+
+    class ast_dumper : public clsc::bes::ast::base_visitor {
+    private:
+        std::ostream& m_out;
+        size_t m_indentation{0};
+
+        template<typename T> std::ostream& operator<<(T&& expr) {
+            m_out << std::string(m_indentation, ' ') << std::forward<T>(expr);
+            // Note: returning ostream guarantees that we enter this function
+            //       only once per '<<' chain
+            return m_out;
+        }
+
+        void common_post_visit(std::string_view ending = "};\n") {
+            m_indentation--;
+            *this << ending;
+        }
+
+    public:
+        ast_dumper(std::ostream& os) : m_out(os) {}
+
+        bool visit(clsc::bes::ast::program* p) override {
+            *this << "program {\n";
+            m_indentation++;
+            return true;
+        }
+        void postVisit(clsc::bes::ast::program*) override { common_post_visit("}"); }
+
+        bool visit(clsc::bes::ast::expression_list* el) override {
+            *this << "expression_list(" << el->loc() << ") {\n";
+            m_indentation++;
+            return true;
+        }
+        void postVisit(clsc::bes::ast::expression_list*) override { common_post_visit("}\n"); }
+
+        bool visit(clsc::bes::ast::identifier_expression* ie) override {
+            *this << "id(" << ie->loc() << "): " << ie->name() << ";\n";
+            return true;
+        }
+
+        bool visit(clsc::bes::ast::logical_binary_expression* lbe) override {
+            const char* kind = [&]() {
+                switch (lbe->kind()) {
+                case clsc::bes::ast::logical_binary_expression::or_expr:
+                    return "or";
+                case clsc::bes::ast::logical_binary_expression::and_expr:
+                    return "and";
+                case clsc::bes::ast::logical_binary_expression::xor_expr:
+                    return "xor";
+                case clsc::bes::ast::logical_binary_expression::arrow_right_expr:
+                    return "arrow_right";
+                case clsc::bes::ast::logical_binary_expression::arrow_left_expr:
+                    return "arrow_left";
+                case clsc::bes::ast::logical_binary_expression::eq_expr:
+                    return "equal";
+                case clsc::bes::ast::logical_binary_expression::neq_expr:
+                    return "not_equal";
+                default:
+                    assert(false && "invalid logical binary expression");
+                }
+                return "";
+            }();
+            *this << kind << "(" << lbe->loc() << ") {\n";
+            m_indentation++;
+            return true;
+        }
+        void postVisit(clsc::bes::ast::logical_binary_expression*) override { common_post_visit(); }
+
+        bool visit(clsc::bes::ast::not_expression* ne) override {
+            *this << "not(" << ne->loc() << ") {\n";
+            m_indentation++;
+            return true;
+        }
+        void postVisit(clsc::bes::ast::not_expression*) override { common_post_visit(); }
+
+        bool visit(clsc::bes::ast::assign_expression* ae) override {
+            *this << "assign(" << ae->loc() << ") {\n";
+            m_indentation++;
+            return true;
+        }
+        void postVisit(clsc::bes::ast::assign_expression*) override { common_post_visit(); }
+
+        bool visit(clsc::bes::ast::alias_expression* ae) override {
+            *this << "alias(" << ae->loc() << ") {\n";
+            m_indentation++;
+            return true;
+        }
+        void postVisit(clsc::bes::ast::alias_expression* ae) override {
+            *this << "'" << ae->literal() << "';\n";
+            common_post_visit();
+        }
+
+        bool visit(clsc::bes::ast::var_expression* ve) override {
+            *this << "var(" << ve->loc() << "): \n";
+            m_indentation++;
+            return true;
+        }
+        void postVisit(clsc::bes::ast::var_expression*) override { common_post_visit(""); }
+
+        bool visit(clsc::bes::ast::eval_expression* ee) override {
+            *this << "eval(" << ee->loc() << ") [\n";
+            m_indentation++;
+            return true;
+        }
+        void postVisit(clsc::bes::ast::eval_expression*) override { common_post_visit("];\n"); }
+
+        bool visit(clsc::bes::ast::parenthesized_expression* pe) override {
+            *this << "parenthesized(" << pe->loc() << ") {\n";
+            m_indentation++;
+            return true;
+        }
+        void postVisit(clsc::bes::ast::parenthesized_expression*) override { common_post_visit(); }
+
+        bool visit(clsc::bes::ast::bool_literal_expression* ble) override {
+            *this << "bool(" << ble->loc() << "): " << std::boolalpha << ble->value() << ";\n";
+            return true;
+        }
+    };
+};
 
 TEST_P(besc_lexer_parser_tests, all) {
     const auto& param = GetParam();
@@ -267,8 +389,9 @@ TEST_P(besc_lexer_parser_tests, all) {
     auto program = param;
     clsc::bes::parser parser{token_stream, std::move(program)};
     auto ast = parser.parse();
-    // TODO: visit the ast
-    (void)ast;
+
+    ast_dumper dumper(std::cout);
+    ast.apply(&dumper);
 }
 
 INSTANTIATE_TEST_CASE_P(
