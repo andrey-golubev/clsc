@@ -1,4 +1,4 @@
-// Copyright 2022 Andrey Golubev
+// Copyright 2023 Andrey Golubev
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -365,39 +365,38 @@ private:
     }
 };
 
-// TODO: rename postVisit -> post_visit according to the code style
 struct base_visitor {
     virtual ~base_visitor() = default;
 
     virtual bool visit(program*) { return true; }
-    virtual void postVisit(program*) {}
+    virtual void post_visit(program*) {}
     virtual bool visit(expression_list*) { return true; }
-    virtual void postVisit(expression_list*) {}
+    virtual void post_visit(expression_list*) {}
     virtual bool visit(identifier_expression*) { return true; }
-    virtual void postVisit(identifier_expression*) {}
+    virtual void post_visit(identifier_expression*) {}
     virtual bool visit(logical_binary_expression*) { return true; }
-    virtual void postVisit(logical_binary_expression*) {}
+    virtual void post_visit(logical_binary_expression*) {}
     virtual bool visit(not_expression*) { return true; }
-    virtual void postVisit(not_expression*) {}
+    virtual void post_visit(not_expression*) {}
     virtual bool visit(assign_expression*) { return true; }
-    virtual void postVisit(assign_expression*) {}
+    virtual void post_visit(assign_expression*) {}
     virtual bool visit(alias_expression*) { return true; }
-    virtual void postVisit(alias_expression*) {}
+    virtual void post_visit(alias_expression*) {}
     virtual bool visit(var_expression*) { return true; }
-    virtual void postVisit(var_expression*) {}
+    virtual void post_visit(var_expression*) {}
     virtual bool visit(eval_expression*) { return true; }
-    virtual void postVisit(eval_expression*) {}
+    virtual void post_visit(eval_expression*) {}
     virtual bool visit(parenthesized_expression*) { return true; }
-    virtual void postVisit(parenthesized_expression*) {}
+    virtual void post_visit(parenthesized_expression*) {}
     virtual bool visit(bool_literal_expression*) { return true; }
-    virtual void postVisit(bool_literal_expression*) {}
+    virtual void post_visit(bool_literal_expression*) {}
 };
 
 inline void program::apply(base_visitor* visitor) {
     if (visitor->visit(this)) {
         assert(m_all);
         m_all->apply(visitor);
-        visitor->postVisit(this);
+        visitor->post_visit(this);
     }
 }
 
@@ -410,7 +409,7 @@ inline void expression_list::apply(base_visitor* visitor) {
 
 inline void identifier_expression::apply(base_visitor* visitor) {
     if (visitor->visit(this))
-        visitor->postVisit(this);
+        visitor->post_visit(this);
 }
 
 inline void logical_binary_expression::apply(base_visitor* visitor) {
@@ -419,7 +418,7 @@ inline void logical_binary_expression::apply(base_visitor* visitor) {
         assert(m_right);
         m_left->apply(visitor);
         m_right->apply(visitor);
-        visitor->postVisit(this);
+        visitor->post_visit(this);
     }
 }
 
@@ -427,7 +426,7 @@ inline void not_expression::apply(base_visitor* visitor) {
     if (visitor->visit(this)) {
         assert(m_expr);
         m_expr->apply(visitor);
-        visitor->postVisit(this);
+        visitor->post_visit(this);
     }
 }
 
@@ -437,7 +436,7 @@ inline void assign_expression::apply(base_visitor* visitor) {
         assert(m_value);
         m_identifier->apply(visitor);
         m_value->apply(visitor);
-        visitor->postVisit(this);
+        visitor->post_visit(this);
     }
 }
 
@@ -445,7 +444,7 @@ inline void alias_expression::apply(base_visitor* visitor) {
     if (visitor->visit(this)) {
         assert(m_identifier);
         m_identifier->apply(visitor);
-        visitor->postVisit(this);
+        visitor->post_visit(this);
     }
 }
 
@@ -453,7 +452,7 @@ inline void var_expression::apply(base_visitor* visitor) {
     if (visitor->visit(this)) {
         assert(m_identifier);
         m_identifier->apply(visitor);
-        visitor->postVisit(this);
+        visitor->post_visit(this);
     }
 }
 
@@ -461,7 +460,7 @@ inline void eval_expression::apply(base_visitor* visitor) {
     if (visitor->visit(this)) {
         assert(m_expr);
         m_expr->apply(visitor);
-        visitor->postVisit(this);
+        visitor->post_visit(this);
     }
 }
 
@@ -469,13 +468,13 @@ inline void parenthesized_expression::apply(base_visitor* visitor) {
     if (visitor->visit(this)) {
         assert(m_expr);
         m_expr->apply(visitor);
-        visitor->postVisit(this);
+        visitor->post_visit(this);
     }
 }
 
 inline void bool_literal_expression::apply(base_visitor* visitor) {
     if (visitor->visit(this))
-        visitor->postVisit(this);
+        visitor->post_visit(this);
 }
 
 }  // namespace ast

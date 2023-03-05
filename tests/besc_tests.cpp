@@ -1,4 +1,4 @@
-// Copyright 2022 Andrey Golubev
+// Copyright 2023 Andrey Golubev
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -282,14 +282,14 @@ struct besc_lexer_parser_tests : testing::TestWithParam<std::string> {
             m_indentation++;
             return true;
         }
-        void postVisit(clsc::bes::ast::program*) override { common_post_visit("}"); }
+        void post_visit(clsc::bes::ast::program*) override { common_post_visit("}"); }
 
         bool visit(clsc::bes::ast::expression_list* el) override {
             *this << "expression_list(" << el->loc() << ") {\n";
             m_indentation++;
             return true;
         }
-        void postVisit(clsc::bes::ast::expression_list*) override { common_post_visit("}\n"); }
+        void post_visit(clsc::bes::ast::expression_list*) override { common_post_visit("}\n"); }
 
         bool visit(clsc::bes::ast::identifier_expression* ie) override {
             *this << "id(" << ie->loc() << "): " << ie->name() << ";\n";
@@ -322,28 +322,30 @@ struct besc_lexer_parser_tests : testing::TestWithParam<std::string> {
             m_indentation++;
             return true;
         }
-        void postVisit(clsc::bes::ast::logical_binary_expression*) override { common_post_visit(); }
+        void post_visit(clsc::bes::ast::logical_binary_expression*) override {
+            common_post_visit();
+        }
 
         bool visit(clsc::bes::ast::not_expression* ne) override {
             *this << "not(" << ne->loc() << ") {\n";
             m_indentation++;
             return true;
         }
-        void postVisit(clsc::bes::ast::not_expression*) override { common_post_visit(); }
+        void post_visit(clsc::bes::ast::not_expression*) override { common_post_visit(); }
 
         bool visit(clsc::bes::ast::assign_expression* ae) override {
             *this << "assign(" << ae->loc() << ") {\n";
             m_indentation++;
             return true;
         }
-        void postVisit(clsc::bes::ast::assign_expression*) override { common_post_visit(); }
+        void post_visit(clsc::bes::ast::assign_expression*) override { common_post_visit(); }
 
         bool visit(clsc::bes::ast::alias_expression* ae) override {
             *this << "alias(" << ae->loc() << ") {\n";
             m_indentation++;
             return true;
         }
-        void postVisit(clsc::bes::ast::alias_expression* ae) override {
+        void post_visit(clsc::bes::ast::alias_expression* ae) override {
             *this << "'" << ae->literal() << "';\n";
             common_post_visit();
         }
@@ -353,21 +355,21 @@ struct besc_lexer_parser_tests : testing::TestWithParam<std::string> {
             m_indentation++;
             return true;
         }
-        void postVisit(clsc::bes::ast::var_expression*) override { common_post_visit(); }
+        void post_visit(clsc::bes::ast::var_expression*) override { common_post_visit(); }
 
         bool visit(clsc::bes::ast::eval_expression* ee) override {
             *this << "eval(" << ee->loc() << ") [\n";
             m_indentation++;
             return true;
         }
-        void postVisit(clsc::bes::ast::eval_expression*) override { common_post_visit("];\n"); }
+        void post_visit(clsc::bes::ast::eval_expression*) override { common_post_visit("];\n"); }
 
         bool visit(clsc::bes::ast::parenthesized_expression* pe) override {
             *this << "parenthesized(" << pe->loc() << ") {\n";
             m_indentation++;
             return true;
         }
-        void postVisit(clsc::bes::ast::parenthesized_expression*) override { common_post_visit(); }
+        void post_visit(clsc::bes::ast::parenthesized_expression*) override { common_post_visit(); }
 
         bool visit(clsc::bes::ast::bool_literal_expression* ble) override {
             *this << "bool(" << ble->loc() << "): " << std::boolalpha << ble->value() << ";\n";

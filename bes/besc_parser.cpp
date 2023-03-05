@@ -1,4 +1,4 @@
-// Copyright 2022 Andrey Golubev
+// Copyright 2023 Andrey Golubev
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -531,7 +531,7 @@ class program_parser {
         }
 
         /*! removes the node that is currently at the top of the ast stack,
-            processing its children beforehand in the same order they were added
+            processing its children beforehand in the order they were added
 
             \sa grow_ast(), amend_ast_head()
          */
