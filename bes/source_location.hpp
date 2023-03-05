@@ -30,6 +30,7 @@
 
 #include <cstddef>
 #include <iterator>
+#include <ostream>
 #include <string>
 
 namespace clsc {
@@ -55,6 +56,10 @@ struct source_location {
 
     explicit operator std::string() const {
         return std::to_string(line) + ':' + std::to_string(column);
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const source_location& x) {
+        return os << x.line << ':' << x.column;
     }
 };
 }  // namespace bes

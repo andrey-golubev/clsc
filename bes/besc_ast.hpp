@@ -184,13 +184,13 @@ private:
         assert(false && "synthetic expression couldn't be part of the tree");
     }
 };
-struct or_synthetic : synthetic_expression {};
-struct and_synthetic : synthetic_expression {};
-struct xor_synthetic : synthetic_expression {};
-struct arrow_right_synthetic : synthetic_expression {};
-struct arrow_left_synthetic : synthetic_expression {};
-struct eq_synthetic : synthetic_expression {};
-struct neq_synthetic : synthetic_expression {};
+struct or_synthetic final : synthetic_expression {};
+struct and_synthetic final : synthetic_expression {};
+struct xor_synthetic final : synthetic_expression {};
+struct arrow_right_synthetic final : synthetic_expression {};
+struct arrow_left_synthetic final : synthetic_expression {};
+struct eq_synthetic final : synthetic_expression {};
+struct neq_synthetic final : synthetic_expression {};
 
 inline logical_binary_expression::expr_kind
 logical_binary_expression::determine_synthetic_kind(expression* e) {
@@ -365,6 +365,7 @@ private:
     }
 };
 
+// TODO: rename postVisit -> post_visit according to the code style
 struct base_visitor {
     virtual ~base_visitor() = default;
 
