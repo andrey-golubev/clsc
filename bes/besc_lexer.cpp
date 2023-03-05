@@ -272,9 +272,10 @@ void lexer::tokenize() {
     int column = 0;
     std::size_t offset = 0;  // monotonically increasing character offset
 
-    for (char current = '\0'; m_in.get(current).good(); ++offset) {
+    for (char current = '\0'; m_in.get(current).good();) {
         state.add(current);
         ++column;
+        ++offset;
 
         switch (current) {
         case '\0': {

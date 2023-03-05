@@ -615,7 +615,7 @@ class program_parser {
                 stack.emplace_back(std::make_unique<substatement>());
 
                 // ast:
-                const auto& id_token = valid[1];
+                const auto& id_token = valid[0];
                 auto identifier_expr = std::make_unique<ast::identifier_expression>(
                     id_token.loc, parser->find_substring(id_token.loc)
                 );
