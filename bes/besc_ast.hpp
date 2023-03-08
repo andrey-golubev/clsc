@@ -368,27 +368,27 @@ private:
 struct base_visitor {
     virtual ~base_visitor() = default;
 
-    virtual bool visit(program*) { return true; }
+    [[nodiscard]] virtual bool visit(program*) { return true; }
     virtual void post_visit(program*) {}
-    virtual bool visit(expression_list*) { return true; }
+    [[nodiscard]] virtual bool visit(expression_list*) { return true; }
     virtual void post_visit(expression_list*) {}
-    virtual bool visit(identifier_expression*) { return true; }
+    [[nodiscard]] virtual bool visit(identifier_expression*) { return true; }
     virtual void post_visit(identifier_expression*) {}
-    virtual bool visit(logical_binary_expression*) { return true; }
+    [[nodiscard]] virtual bool visit(logical_binary_expression*) { return true; }
     virtual void post_visit(logical_binary_expression*) {}
-    virtual bool visit(not_expression*) { return true; }
+    [[nodiscard]] virtual bool visit(not_expression*) { return true; }
     virtual void post_visit(not_expression*) {}
-    virtual bool visit(assign_expression*) { return true; }
+    [[nodiscard]] virtual bool visit(assign_expression*) { return true; }
     virtual void post_visit(assign_expression*) {}
-    virtual bool visit(alias_expression*) { return true; }
+    [[nodiscard]] virtual bool visit(alias_expression*) { return true; }
     virtual void post_visit(alias_expression*) {}
-    virtual bool visit(var_expression*) { return true; }
+    [[nodiscard]] virtual bool visit(var_expression*) { return true; }
     virtual void post_visit(var_expression*) {}
-    virtual bool visit(eval_expression*) { return true; }
+    [[nodiscard]] virtual bool visit(eval_expression*) { return true; }
     virtual void post_visit(eval_expression*) {}
-    virtual bool visit(parenthesized_expression*) { return true; }
+    [[nodiscard]] virtual bool visit(parenthesized_expression*) { return true; }
     virtual void post_visit(parenthesized_expression*) {}
-    virtual bool visit(bool_literal_expression*) { return true; }
+    [[nodiscard]] virtual bool visit(bool_literal_expression*) { return true; }
     virtual void post_visit(bool_literal_expression*) {}
 };
 
@@ -401,10 +401,13 @@ inline void program::apply(base_visitor* visitor) {
 }
 
 inline void expression_list::apply(base_visitor* visitor) {
+    if (!visitor->visit(this))
+        return;
     for (const auto& expr : m_subexprs) {
         assert(expr);
         expr->apply(visitor);
     }
+    visitor->post_visit(this);
 }
 
 inline void identifier_expression::apply(base_visitor* visitor) {
