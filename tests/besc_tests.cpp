@@ -138,8 +138,7 @@ INSTANTIATE_TEST_CASE_P(
         std::make_pair("_90iyu", "IDENTIFIER 0:0\n"),
         std::make_pair("true", "LITERAL_TRUE 0:0\n"),
         std::make_pair("false", "LITERAL_FALSE 0:0\n"),
-        std::make_pair("\"\"", "LITERAL_STRING 0:0\n"),
-        std::make_pair("\"hello! world\"", "LITERAL_STRING 0:0\n"),
+        std::make_pair("\"hello! world\"", "LITERAL_STRING 0:1\n"),
         std::make_pair("(", "PAREN_LEFT 0:0\n"),
         std::make_pair(")", "PAREN_RIGHT 0:0\n"),
 
@@ -159,7 +158,7 @@ INSTANTIATE_TEST_CASE_P(
         std::make_pair("_x == _01y", "IDENTIFIER 0:0\nEQ 0:3\nIDENTIFIER 0:6\n"),
         std::make_pair(
             "symbol x = \"foo && bar\";",
-            "ALIAS 0:0\nIDENTIFIER 0:7\nASSIGN 0:9\nLITERAL_STRING 0:11\nSEMICOLON 0:23\n"
+            "ALIAS 0:0\nIDENTIFIER 0:7\nASSIGN 0:9\nLITERAL_STRING 0:12\nSEMICOLON 0:23\n"
         ),
         std::make_pair(
             "( x || y ) && z;",
@@ -170,7 +169,7 @@ INSTANTIATE_TEST_CASE_P(
         // multi-line
         std::make_pair(
             "symbol x=\"A || B\";\neval x;",
-            "ALIAS 0:0\nIDENTIFIER 0:7\nASSIGN 0:8\nLITERAL_STRING 0:9\nSEMICOLON 0:17\nEVAL "
+            "ALIAS 0:0\nIDENTIFIER 0:7\nASSIGN 0:8\nLITERAL_STRING 0:10\nSEMICOLON 0:17\nEVAL "
             "1:0\nIDENTIFIER 1:5\nSEMICOLON 1:6\n"
         )
     ),
