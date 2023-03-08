@@ -127,7 +127,8 @@ class lexer_state {
     }
 
     bool holds_valid_literal_string_token() const {
-        if (m_buffer.size() < 2) {
+        if (m_buffer.size() < 3) {
+            // a valid literal string is at least a `quote any_character quote`
             return false;
         }
         // cannot have " in the middle (escaping is not supported)
@@ -157,6 +158,11 @@ public:
         if (it == registry.end()) {
             // special case: string literal
             if (holds_valid_literal_string_token()) {
+                // Note: modify location to *exclude* the literal string markers
+                assert(loc.length > 2);
+                ++loc.column;
+                ++loc.offset;
+                loc.length -= 2;
                 return {TOKEN_LITERAL_STRING, loc};
             }
             if (!holds_valid_identifier_token()) {
@@ -169,13 +175,13 @@ public:
     }
 
     void add(char c) { m_buffer.push_back(c); }
-    void update(source_location loc) { m_loc = loc; }
-    bool empty() const { return m_buffer.empty(); }
+    void update(source_location loc) noexcept { m_loc = loc; }
+    bool empty() const noexcept { return m_buffer.empty(); }
 
     void trim() { clsc::helpers::trim(clsc::helpers::trim_both_sides_tag{}, m_buffer); }
 
-    const std::string& buffer() const { return m_buffer; }
-    source_location loc() const { return m_loc; }
+    const std::string& buffer() const noexcept { return m_buffer; }
+    source_location loc() const noexcept { return m_loc; }
 
     // flushes the buffer, asserting if buffer size != ExpectedSize
     template<std::size_t ExpectedSize> void flush() {
@@ -327,7 +333,8 @@ void lexer::process_literal_string(
     char start, lexer_state& state, int& line, int& column, std::size_t& offset
 ) {
     for (char current = '\0'; m_in.get(current).good();) {
-        if (current == start) {
+        const bool reached_the_end = (current == start);
+        if (reached_the_end) {
             state.add(current);
             ++column;
             ++offset;
