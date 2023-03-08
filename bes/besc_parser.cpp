@@ -43,7 +43,7 @@
 #include <variant>
 #include <vector>
 
-#include <iostream>  // TODO: remove this once debugging is over
+#include <iostream>
 
 /*!
 %% tokens
@@ -452,6 +452,11 @@ template<typename Stack> typename Stack::value_type pop(Stack& stack) {
     return last;
 }
 
+template<typename Stack> const typename Stack::value_type& top(const Stack& stack) {
+    assert(!stack.empty());
+    return stack.back();
+}
+
 }  // namespace
 
 namespace clsc {
@@ -482,16 +487,13 @@ class program_parser {
         dst->replace(src, std::move(src->m_left));
     }
 
-    // TODO: the below types should really be hidden inside the ast_creator
+    // Note: types are outside of ast_creator definition due to template
     using shrink_sentinel = std::monostate;
-    enum amend_policy {  // TODO: remove - this is only useful for debugging right now
-        amend_arbitrarily = 0,
-        amend_top_level = 1,
-    };
     enum shrink_policy {
         just_shrink = 0,
         drop_sentinel = 1,
     };
+
     template<typename Stack> class ast_creator {
         Stack& m_parse_tree_stack;
         program_parser& m_parser;
@@ -513,19 +515,14 @@ class program_parser {
             m_parse_tree_stack.emplace_back(shrink_sentinel{});
         }
 
-        /*! adds \a child as a child to to the current ast stack head
+        /*! adds \a child as a child to the current ast stack head
 
             \sa grow_ast(), shrink_ast()
          */
-        void amend_ast_head(
-            std::unique_ptr<ast::expression> child, amend_policy policy = amend_arbitrarily
-        ) {
+        void amend_ast_head(std::unique_ptr<ast::expression> child) {
             assert(!m_parser.m_expression_stack.empty());
             assert(m_parser.m_expression_stack.back().content);
             assert(child);
-            if (policy == amend_top_level)
-                assert(m_parser.m_expression_stack.size() == 1);
-
             m_parser.m_expression_stack.back().add(std::move(child));
         }
 
@@ -556,6 +553,10 @@ class program_parser {
             // longer use the popped element
             return {nullptr};
         }
+
+        /*! returns the current size of the ast stack
+         */
+        size_t stack_size() const noexcept { return m_parser.m_expression_stack.size(); }
     };
     template<typename Stack> ast_creator(Stack) -> ast_creator<Stack>;
 
@@ -647,7 +648,9 @@ class program_parser {
                     parser->find_substring(literal_token.loc)
                 );
 
-                ast_creator(stack, parser).amend_ast_head(std::move(alias_expr), amend_top_level);
+                ast_creator creator(stack, parser);
+                assert(creator.stack_size() == 1);  // ensure top-level amend
+                creator.amend_ast_head(std::move(alias_expr));
             };
             NONTERMINAL_CASE(var_statement) {
                 const auto valid =
@@ -663,7 +666,9 @@ class program_parser {
                     location_from_sequence(valid), std::move(identifier_expr)
                 );
 
-                ast_creator(stack, parser).amend_ast_head(std::move(var_expr), amend_top_level);
+                ast_creator creator(stack, parser);
+                assert(creator.stack_size() == 1);  // ensure top-level amend
+                creator.amend_ast_head(std::move(var_expr));
             };
             NONTERMINAL_CASE(eval_statement) {
                 const auto valid = read_sequence(in, {clsc::bes::TOKEN_EVAL});
@@ -773,26 +778,29 @@ class program_parser {
                 stack.emplace_back(std::make_unique<expression>());
 
                 // ast:
-                auto synthetic_expr = [&]() -> std::unique_ptr<ast::expression> {
-                    if (expr_token == clsc::bes::TOKEN_NEQ)
-                        return std::make_unique<ast::neq_synthetic>();
-                    if (expr_token == clsc::bes::TOKEN_EQ)
-                        return std::make_unique<ast::eq_synthetic>();
-                    if (expr_token == clsc::bes::TOKEN_ARROW_LEFT)
-                        return std::make_unique<ast::arrow_left_synthetic>();
-                    if (expr_token == clsc::bes::TOKEN_ARROW_RIGHT)
-                        return std::make_unique<ast::arrow_right_synthetic>();
-                    if (expr_token == clsc::bes::TOKEN_XOR)
-                        return std::make_unique<ast::xor_synthetic>();
-                    if (expr_token == clsc::bes::TOKEN_AND)
-                        return std::make_unique<ast::and_synthetic>();
-                    if (expr_token == clsc::bes::TOKEN_OR)
-                        return std::make_unique<ast::or_synthetic>();
-
-                    assert(false && "unreachable due to verification step above");
-                    return nullptr;
-                }();
-                ast_creator(stack, parser).amend_ast_head(std::move(synthetic_expr));
+                // Note: at this stage it is clear that the ast element is a
+                // logical binary expression
+                auto binary_expr = fast_cast<ast::logical_binary_expression*>(
+                    top(parser->m_expression_stack).content
+                );
+                const std::pair<clsc::bes::token, ast::logical_binary_expression::expr_kind>
+                    mapping[] = {
+                        {clsc::bes::TOKEN_OR,          ast::logical_binary_expression::or_expr },
+                        {clsc::bes::TOKEN_AND,         ast::logical_binary_expression::and_expr},
+                        {clsc::bes::TOKEN_XOR,         ast::logical_binary_expression::xor_expr},
+                        {clsc::bes::TOKEN_ARROW_RIGHT,
+                         ast::logical_binary_expression::arrow_right_expr                      },
+                        {clsc::bes::TOKEN_ARROW_LEFT,
+                         ast::logical_binary_expression::arrow_left_expr                       },
+                        {clsc::bes::TOKEN_EQ,          ast::logical_binary_expression::eq_expr },
+                        {clsc::bes::TOKEN_NEQ,         ast::logical_binary_expression::neq_expr},
+                };
+                auto kind =
+                    std::find_if(std::begin(mapping), std::end(mapping), [&](const auto& x) {
+                        return expr_token == x.first;
+                    });
+                assert(kind != std::end(mapping));
+                binary_expr->set_kind(kind->second);
             };
             NONTERMINAL_CASE(parenthesized_expression) {
                 stack.emplace_back(clsc::bes::TOKEN_PAREN_LEFT);

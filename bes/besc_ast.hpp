@@ -130,6 +130,11 @@ struct logical_binary_expression : expression {
     const expression* left() const { return m_left.get(); }
     const expression* right() const { return m_right.get(); }
     expr_kind kind() const { return m_kind; }
+    void set_kind(expr_kind kind) {
+        assert(m_kind == none);
+        assert(kind != none);
+        m_kind = kind;
+    }
 
 private:
     std::unique_ptr<expression> m_left;
@@ -137,16 +142,6 @@ private:
     expr_kind m_kind{none};
 
     void add(std::unique_ptr<expression> e) override {
-        // TODO: this is a *very* special case (probably needs some other
-        // handling)
-        if (m_kind == none) {
-            auto kind = determine_synthetic_kind(e.get());
-            if (kind != none) {
-                m_kind = kind;
-                return;
-            }
-        }
-
         assert(!m_left || !m_right);
         if (!m_left) {
             m_left = std::move(e);
@@ -165,57 +160,8 @@ private:
         swap(m_right, y);
     }
 
-    inline static expr_kind determine_synthetic_kind(expression* e);
     friend class ::clsc::bes::program_parser;
 };
-
-// synthetic expressions:
-struct synthetic_expression : expression {
-    synthetic_expression() : expression({}) {}
-    void apply(base_visitor*) override {
-        assert(false && "synthetic expression couldn't be visited");
-    }
-
-private:
-    void add(std::unique_ptr<expression>) override {
-        assert(false && "synthetic expression couldn't be part of the tree");
-    }
-    void replace(const expression* const, std::unique_ptr<expression>) override {
-        assert(false && "synthetic expression couldn't be part of the tree");
-    }
-};
-struct or_synthetic final : synthetic_expression {};
-struct and_synthetic final : synthetic_expression {};
-struct xor_synthetic final : synthetic_expression {};
-struct arrow_right_synthetic final : synthetic_expression {};
-struct arrow_left_synthetic final : synthetic_expression {};
-struct eq_synthetic final : synthetic_expression {};
-struct neq_synthetic final : synthetic_expression {};
-
-inline logical_binary_expression::expr_kind
-logical_binary_expression::determine_synthetic_kind(expression* e) {
-    if (!dynamic_cast<synthetic_expression*>(e))  // fast-ish check for inapplicability
-        return logical_binary_expression::none;
-
-    // poor man's way to determine the expression kind
-    if (dynamic_cast<or_synthetic*>(e))
-        return logical_binary_expression::or_expr;
-    if (dynamic_cast<and_synthetic*>(e))
-        return logical_binary_expression::and_expr;
-    if (dynamic_cast<xor_synthetic*>(e))
-        return logical_binary_expression::xor_expr;
-    if (dynamic_cast<arrow_right_synthetic*>(e))
-        return logical_binary_expression::arrow_right_expr;
-    if (dynamic_cast<arrow_left_synthetic*>(e))
-        return logical_binary_expression::arrow_left_expr;
-    if (dynamic_cast<eq_synthetic*>(e))
-        return logical_binary_expression::eq_expr;
-    if (dynamic_cast<neq_synthetic*>(e))
-        return logical_binary_expression::neq_expr;
-
-    assert(false && "unreachable due to verification at the very beginning");
-    return logical_binary_expression::none;
-}
 
 struct not_expression : expression {
     not_expression(source_location loc) : expression(loc) {}
