@@ -26,17 +26,10 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "besc_lexer.hpp"
 #include "besc_parser.hpp"
+#include "helpers.hpp"
 #include "tokens.hpp"
-#include <besc_lexer.hpp>
-#include <cctype>
-#include <gtest/gtest-param-test.h>
-#include <ios>
-#include <ostream>
-#include <string>
-#include <sys/socket.h>
-#include <token_stream.hpp>
-#include <unordered_map>
 
 #include <gtest/gtest.h>
 
@@ -59,7 +52,7 @@ struct test_name_corrector {
             repeats.insert({test_name, 1});
             return test_name;
         }
-        test_name += std::to_string(it->second);
+        test_name += std::to_string(it->second++);
         return test_name;
     }
 
@@ -143,6 +136,7 @@ INSTANTIATE_TEST_CASE_P(
         std::make_pair(")", "PAREN_RIGHT 0:0\n"),
 
         // special cases
+        std::make_pair("", ""),
         std::make_pair(" ", ""),
         std::make_pair("\t", "")
     ),
@@ -254,7 +248,7 @@ INSTANTIATE_TEST_CASE_P(
     besc_parser_tests::test_name_printer()
 );
 
-struct besc_lexer_parser_tests : testing::TestWithParam<std::string> {
+struct besc_lexer_parser_tests : testing::TestWithParam<std::pair<std::string, std::string>> {
 
     class ast_dumper : public clsc::bes::ast::base_visitor {
     private:
@@ -350,18 +344,18 @@ struct besc_lexer_parser_tests : testing::TestWithParam<std::string> {
         }
 
         bool visit(clsc::bes::ast::var_expression* ve) override {
-            *this << "var(" << ve->loc() << "): {\n";
+            *this << "var(" << ve->loc() << ") {\n";
             m_indentation++;
             return true;
         }
         void post_visit(clsc::bes::ast::var_expression*) override { common_post_visit(); }
 
         bool visit(clsc::bes::ast::eval_expression* ee) override {
-            *this << "eval(" << ee->loc() << ") [\n";
+            *this << "eval(" << ee->loc() << ") {\n";
             m_indentation++;
             return true;
         }
-        void post_visit(clsc::bes::ast::eval_expression*) override { common_post_visit("];\n"); }
+        void post_visit(clsc::bes::ast::eval_expression*) override { common_post_visit(); }
 
         bool visit(clsc::bes::ast::parenthesized_expression* pe) override {
             *this << "parenthesized(" << pe->loc() << ") {\n";
@@ -381,50 +375,235 @@ TEST_P(besc_lexer_parser_tests, all) {
     const auto& param = GetParam();
 
     std::stringstream in_stream;
-    in_stream << param;
+    in_stream << param.first;
     clsc::bes::token_stream token_stream;
     clsc::bes::lexer lexer{in_stream, token_stream};
     lexer.tokenize();
     ASSERT_FALSE(in_stream.good());
 
-    auto program = param;
+    auto program = param.first;
     clsc::bes::parser parser{token_stream, std::move(program)};
     auto ast = parser.parse();
 
-    ast_dumper dumper(std::cout);
+    std::stringstream ss;
+    ast_dumper dumper(ss);
     ast.apply(&dumper);
+
+    auto expected = param.second;
+    clsc::helpers::trim(clsc::helpers::trim_both_sides_tag{}, expected);
+    ASSERT_EQ(ss.str(), expected);
 }
 
 INSTANTIATE_TEST_CASE_P(
     valid_programs,
     besc_lexer_parser_tests,
     testing::Values(
-        R"(
-        x || y;
-        y && x;
-        x ^ y;
-        x -> y;
-        x <- y;
-        x == y;
-        x != y;
-        ~x;)",
+        std::make_pair(
+            R"(
+x || y;
+y && x;
+x ^ y;
+x -> y;
+x <- y;
+x == y;
+x != y;
+~x;
+)",
+            R"(
+program {
+ expression_list(0:0) {
+  or(1:0) {
+   id(1:0): x;
+   id(1:5): y;
+  };
+  and(2:0) {
+   id(2:0): y;
+   id(2:5): x;
+  };
+  xor(3:0) {
+   id(3:0): x;
+   id(3:4): y;
+  };
+  arrow_right(4:0) {
+   id(4:0): x;
+   id(4:5): y;
+  };
+  arrow_left(5:0) {
+   id(5:0): x;
+   id(5:5): y;
+  };
+  equal(6:0) {
+   id(6:0): x;
+   id(6:5): y;
+  };
+  not_equal(7:0) {
+   id(7:0): x;
+   id(7:5): y;
+  };
+  not(8:0) {
+   id(8:1): x;
+  };
+ }
+})"
+        ),
 
-        "(x || y) && x;",
-        "eval x && y;",
-        "var My_veryBest_var;",
-        "x = true",
-        "symbol long_expr = \"foo && (bar || baz)\";",
+        std::make_pair(
+            "(x || y) && x;",
+            R"(
+program {
+ expression_list(0:0) {
+  and(0:0) {
+   parenthesized(0:0) {
+    or(0:1) {
+     id(0:1): x;
+     id(0:6): y;
+    };
+   };
+   id(0:12): x;
+  };
+ }
+})"
+        ),
+        std::make_pair("eval x && y;", R"(
+program {
+ expression_list(0:0) {
+  eval(0:0) {
+   and(0:5) {
+    id(0:5): x;
+    id(0:10): y;
+   };
+  };
+ }
+})"),
+        std::make_pair("var My_veryBest_var;", R"(
+program {
+ expression_list(0:0) {
+  var(0:0) {
+   id(0:4): My_veryBest_var;
+  };
+ }
+})"),
+        std::make_pair("x = true", R"(
+program {
+ expression_list(0:0) {
+  assign(0:0) {
+   id(0:0): x;
+   bool(0:4): true;
+  };
+ }
+})"),
+        std::make_pair("symbol long_expr = \"foo && (bar || baz)\";", R"(
+program {
+ expression_list(0:0) {
+  alias(0:0) {
+   id(0:7): long_expr;
+   'foo && (bar || baz)';
+  };
+ }
+})"),
 
         // multi-line and complicated
-        R"(symbol long_expr = "foo && (bar || baz) ";
-        var x;
-        x = long_expr || y;)",
+        std::make_pair(
+            R"(
+symbol long_expr = "foo && (bar || baz) ";
+var x;
+x = long_expr || y;
+)",
+            R"(
+program {
+ expression_list(0:0) {
+  alias(1:0) {
+   id(1:7): long_expr;
+   'foo && (bar || baz) ';
+  };
+  var(2:0) {
+   id(2:4): x;
+  };
+  assign(3:0) {
+   id(3:0): x;
+   or(3:4) {
+    id(3:4): long_expr;
+    id(3:17): y;
+   };
+  };
+ }
+})"
+        ),
 
         // parentheses and negation
-        "(~x)",
-        "~(x)",
-        "~((~x))",
-        "(~((y || x) && (~x)) || s0me_we1rd_th1ngy);",
-        "(~y || x)"
+        std::make_pair("(~x)", R"(
+program {
+ expression_list(0:0) {
+  parenthesized(0:0) {
+   not(0:1) {
+    id(0:2): x;
+   };
+  };
+ }
+})"),
+        std::make_pair("~(x)", R"(
+program {
+ expression_list(0:0) {
+  not(0:0) {
+   parenthesized(0:1) {
+    id(0:2): x;
+   };
+  };
+ }
+})"),
+        std::make_pair("~((~x))", R"(
+program {
+ expression_list(0:0) {
+  not(0:0) {
+   parenthesized(0:1) {
+    parenthesized(0:2) {
+     not(0:3) {
+      id(0:4): x;
+     };
+    };
+   };
+  };
+ }
+})"),
+        std::make_pair("(~((y || x) && (~x)) || s0me_we1rd_th1ngy);", R"(
+program {
+ expression_list(0:0) {
+  parenthesized(0:0) {
+   or(0:1) {
+    not(0:1) {
+     parenthesized(0:2) {
+      and(0:3) {
+       parenthesized(0:3) {
+        or(0:4) {
+         id(0:4): y;
+         id(0:9): x;
+        };
+       };
+       parenthesized(0:15) {
+        not(0:16) {
+         id(0:17): x;
+        };
+       };
+      };
+     };
+    };
+    id(0:24): s0me_we1rd_th1ngy;
+   };
+  };
+ }
+})"),
+        std::make_pair("(~y || x)", R"(
+program {
+ expression_list(0:0) {
+  parenthesized(0:0) {
+   or(0:1) {
+    not(0:1) {
+     id(0:2): y;
+    };
+    id(0:7): x;
+   };
+  };
+ }
+})")
     )
 );
