@@ -315,7 +315,11 @@ void parenthesized_expression::apply(parse_tree_visitor* visitor) { visitor->vis
 void not_expression::apply(parse_tree_visitor* visitor) { visitor->visit(this); }
 
 struct printer_visitor : parse_tree_visitor {
-    printer_visitor() { std::cout << "Start of program ...\n"; }
+    printer_visitor() {
+        std::cout << "Parse tree dump:\n";
+        std::cout << "------------------------\n";
+        std::cout << "Start of program ...\n";
+    }
     void visit(statement_list*) override { std::cout << "\tstatement_list\n"; }
     void visit(statement*) override { std::cout << "\tstatement\n"; }
     void visit(substatement*) override { std::cout << "\tsubstatement\n"; }
@@ -326,8 +330,11 @@ struct printer_visitor : parse_tree_visitor {
     void visit(substatement_expression*) override { std::cout << "\tsubstatement_expression\n"; }
     void visit(expression*) override { std::cout << "\texpression\n"; }
     void visit(parenthesized_expression*) override { std::cout << "\tparenthesized_expression\n"; }
-    void visit(not_expression*) override { std::cout << "\not_expression\n"; }
-    ~printer_visitor() { std::cout << "... End of program\n"; }
+    void visit(not_expression*) override { std::cout << "\tnot_expression\n"; }
+    ~printer_visitor() {
+        std::cout << "... End of program\n";
+        std::cout << "------------------------\n";
+    }
 };
 
 template<typename T, typename U> T fast_cast(U* x) {
@@ -337,18 +344,6 @@ template<typename T, typename U> T fast_cast(U* x) {
 
 [[noreturn]] inline void throw_parsing_error(std::string what) {
     throw std::runtime_error("Parsing error: " + what);
-}
-
-[[noreturn]] inline void throw_internal_parsing_error(std::string what) {
-    throw std::runtime_error("Internal parsing error: " + what);
-}
-
-template<typename T> T expression_cast(clsc::bes::ast::expression* x) {
-    auto y = dynamic_cast<T>(x);
-    if (!y) {
-        throw_internal_parsing_error("unexpected expression type");
-    }
-    return y;
 }
 
 inline std::string expected_token_message(clsc::bes::token t) {
