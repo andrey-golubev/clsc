@@ -314,6 +314,10 @@ void expression::apply(parse_tree_visitor* visitor) { visitor->visit(this); }
 void parenthesized_expression::apply(parse_tree_visitor* visitor) { visitor->visit(this); }
 void not_expression::apply(parse_tree_visitor* visitor) { visitor->visit(this); }
 
+// TODO: design a general environment variable based mechanism to handle debug
+// information/logging output in the bes components
+#define PRINT_PARSE_TREE 0
+
 struct printer_visitor : parse_tree_visitor {
     printer_visitor() {
         std::cout << "Parse tree dump:\n";
@@ -848,7 +852,9 @@ public:
         std::vector<parse_tree_element> stack;
         stack.emplace_back(std::make_unique<statement_list>());
 
+#if PRINT_PARSE_TREE
         printer_visitor printer;
+#endif
 
         while (!stack.empty()) {
             parse_tree_element current = pop(stack);
@@ -876,7 +882,9 @@ public:
                     }
                 },
                 [&](const std::unique_ptr<nonterminal>& x) {
+#if PRINT_PARSE_TREE
                     x->apply(&printer);
+#endif
                     unwrap_nonterminal(stack, x.get(), m_in);
                 }
             );
