@@ -504,17 +504,17 @@ program {
 
         // multi-line and complicated
         std::make_pair(
-            R"(
-symbol long_expr = "foo && (bar || baz) ";
+            R"multi_line(
+symbol long_expr = "foo && (bar || baz)";
 var x;
 x = long_expr || y;
-)",
+)multi_line",
             R"(
 program {
  expression_list(0:0) {
   alias(1:0) {
    id(1:7): long_expr;
-   'foo && (bar || baz) ';
+   'foo && (bar || baz)';
   };
   var(2:0) {
    id(2:4): x;
