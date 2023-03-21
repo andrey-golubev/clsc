@@ -51,7 +51,7 @@ struct expression {
     virtual ~expression() = default;
     virtual void apply(base_visitor* visitor) = 0;
 
-    source_location loc() { return m_loc; }
+    source_location loc() const { return m_loc; }
 
 protected:
     source_location m_loc;

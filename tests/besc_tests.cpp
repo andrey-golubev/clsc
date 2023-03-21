@@ -28,6 +28,7 @@
 
 #include "besc_lexer.hpp"
 #include "besc_parser.hpp"
+#include "besc_semant.hpp"
 #include "helpers.hpp"
 #include "tokens.hpp"
 
@@ -605,5 +606,43 @@ program {
   };
  }
 })")
+    )
+);
+
+struct besc_semant_tests
+    : testing::TestWithParam<
+          std::pair<std::string, std::vector<clsc::bes::semant::semantic_error>>> {};
+
+TEST_P(besc_semant_tests, all) {
+    const auto& [program, expected_result] = GetParam();
+
+    std::stringstream in_stream;
+    in_stream << program;
+    clsc::bes::token_stream token_stream;
+    clsc::bes::lexer lexer{in_stream, token_stream};
+    lexer.tokenize();
+    ASSERT_FALSE(in_stream.good());
+
+    clsc::bes::parser parser{token_stream, program};
+    auto ast = parser.parse();
+
+    // semant validation:
+    clsc::bes::semant semant{ast};
+    const auto actual = semant.analyze();
+    ASSERT_EQ(actual, expected_result);
+}
+
+auto semant_test_pair(std::string x, std::vector<clsc::bes::semant::semantic_error> y) {
+    return std::make_pair(std::move(x), std::move(y));
+}
+auto good_semant_test_pair(std::string x) { return semant_test_pair(std::move(x), {}); }
+
+INSTANTIATE_TEST_CASE_P(
+    valid_programs,
+    besc_semant_tests,
+    testing::Values(
+        good_semant_test_pair("var x; eval x;"),
+        good_semant_test_pair("symbol x = \"x\"; eval x;"),
+        good_semant_test_pair("var x; var y; abc = x && y; eval abc;")
     )
 );

@@ -1,4 +1,4 @@
-// Copyright 2022 Andrey Golubev
+// Copyright 2023 Andrey Golubev
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -28,47 +28,44 @@
 
 #pragma once
 
-#include <cstddef>
-#include <iterator>
-#include <ostream>
-#include <string>
+#include "besc_ast.hpp"
+#include "source_location.hpp"
+
+#include <sstream>
 
 namespace clsc {
 namespace bes {
-struct source_location {
-    int line = 0;
-    int column = 0;
 
-    // technical fields
-    std::size_t offset = 0;
-    std::size_t length = 0;
+struct scope;
+struct semant {
+    semant(ast::program& program);
+    ~semant();
 
-    source_location(int l, int c, std::size_t o) : line(l), column(c), offset(o) {}
-    source_location(int l, int c, std::size_t o, std::size_t len)
-        : line(l), column(c), offset(o), length(len) {}
+    struct semantic_error {
+        source_location loc;
+        std::string description;
 
-    source_location() = default;
-    source_location(const source_location&) = default;
-    source_location(source_location&&) = default;
-    source_location& operator=(const source_location&) = default;
-    source_location& operator=(source_location&&) = default;
-    ~source_location() = default;
+        friend bool operator==(const semantic_error& x, const semantic_error& y) noexcept {
+            return x.loc == y.loc && x.description == y.description;
+        }
+        friend bool operator!=(const semantic_error& x, const semantic_error& y) noexcept {
+            return !(x == y);
+        }
+    };
 
-    friend bool operator==(const source_location& x, const source_location& y) noexcept {
-        return x.line == y.line && x.column == y.column && x.offset == y.offset &&
-               x.length == y.length;
-    }
-    friend bool operator!=(const source_location& x, const source_location& y) noexcept {
-        return !(x == y);
+    template<typename... DescriptionBits>
+    static semantic_error make_error(source_location loc, DescriptionBits&&... bits) {
+        std::stringstream ss;
+        (ss << ... << bits) << "\n";
+        return {loc, ss.str()};
     }
 
-    explicit operator std::string() const {
-        return std::to_string(line) + ':' + std::to_string(column);
-    }
+    [[nodiscard]] std::vector<semantic_error> analyze();
 
-    friend std::ostream& operator<<(std::ostream& os, const source_location& x) {
-        return os << x.line << ':' << x.column;
-    }
+private:
+    ast::program& m_program;
+    std::unique_ptr<scope> m_global;
 };
+
 }  // namespace bes
 }  // namespace clsc
