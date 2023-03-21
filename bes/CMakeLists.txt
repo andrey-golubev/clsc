@@ -37,6 +37,8 @@ add_library(${PROJECT_NAME}_parts STATIC
 
   besc_ast.hpp
   besc_parser.cpp besc_parser.hpp
+
+  besc_semant.cpp besc_semant.hpp
 )
 target_include_directories(${PROJECT_NAME}_parts PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(${PROJECT_NAME}_parts PRIVATE clsc_utils)
