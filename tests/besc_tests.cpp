@@ -609,40 +609,78 @@ program {
     )
 );
 
-struct besc_semant_tests
-    : testing::TestWithParam<
-          std::pair<std::string, std::vector<clsc::bes::semant::semantic_error>>> {};
+class semant_test_data {
+    std::string m_program;
+    std::vector<clsc::bes::semant::semantic_error> m_errors;
+
+public:
+    semant_test_data(std::string p) : m_program(std::move(p)) {}
+    semant_test_data& operator<<(clsc::bes::semant::semantic_error e) {
+        m_errors.push_back(std::move(e));
+        return *this;
+    }
+
+    const std::string& program() const noexcept { return m_program; }
+    const std::vector<clsc::bes::semant::semantic_error>& errors() const noexcept {
+        return m_errors;
+    }
+};
+
+struct besc_semant_tests : testing::TestWithParam<semant_test_data> {};
 
 TEST_P(besc_semant_tests, all) {
-    const auto& [program, expected_result] = GetParam();
+    const auto& input = GetParam();
 
     std::stringstream in_stream;
-    in_stream << program;
+    in_stream << input.program();
     clsc::bes::token_stream token_stream;
     clsc::bes::lexer lexer{in_stream, token_stream};
     lexer.tokenize();
     ASSERT_FALSE(in_stream.good());
 
-    clsc::bes::parser parser{token_stream, program};
+    clsc::bes::parser parser{token_stream, input.program()};
     auto ast = parser.parse();
 
     // semant validation:
     clsc::bes::semant semant{ast};
-    const auto actual = semant.analyze();
-    ASSERT_EQ(actual, expected_result);
-}
+    const auto actual_errors = semant.analyze();
+    const auto& expected_errors = input.errors();
 
-auto semant_test_pair(std::string x, std::vector<clsc::bes::semant::semantic_error> y) {
-    return std::make_pair(std::move(x), std::move(y));
+    ASSERT_EQ(actual_errors.size(), expected_errors.size());
+    for (size_t i = 0; i < actual_errors.size(); ++i) {
+        const auto& actual = actual_errors[i];
+        const auto& expected = expected_errors[i];
+
+        ASSERT_EQ(actual.loc.line, expected.loc.line);
+        ASSERT_EQ(actual.loc.column, expected.loc.column);
+
+        ASSERT_EQ(actual.description, expected.description);
+    }
 }
-auto good_semant_test_pair(std::string x) { return semant_test_pair(std::move(x), {}); }
 
 INSTANTIATE_TEST_CASE_P(
     valid_programs,
     besc_semant_tests,
     testing::Values(
-        good_semant_test_pair("var x; eval x;"),
-        good_semant_test_pair("symbol x = \"x\"; eval x;"),
-        good_semant_test_pair("var x; var y; abc = x && y; eval abc;")
+        semant_test_data("var x; eval x;"),
+        semant_test_data("symbol x = \"x\"; eval x;"),
+        semant_test_data("var x; var y; abc = x && y; eval abc;")
+    )
+);
+
+auto make_semant_error(int line, int column, std::string description) {
+    return clsc::bes::semant::make_error(
+        clsc::bes::source_location{line, column, 0, 0}, std::move(description)
+    );
+}
+
+INSTANTIATE_TEST_CASE_P(
+    invalid_programs,
+    besc_semant_tests,
+    testing::Values(
+        (semant_test_data("eval x;") << make_semant_error(0, 5, "x is used before declaration")),
+        (semant_test_data("var x; x = y;")
+         << make_semant_error(0, 7, "x is redeclared. First declared at 0:4")
+         << make_semant_error(0, 11, "y is used before declaration"))
     )
 );
