@@ -134,7 +134,7 @@ public:
         return true;
     }
 
-    std::vector<semant::semantic_error> take_errors() { return std::move(errors); }
+    std::vector<semant::semantic_error> take_errors() { return std::exchange(errors, {}); }
 };
 }  // namespace
 
